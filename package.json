@@ -7,8 +7,12 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "hello": "node dist/hello.js",
+    "server": "node dist/server.js",
+    "query": "node dist/query.js",
     "dev": "tsc && node dist/index.js",
     "dev:hello": "tsc && node dist/hello.js",
+    "dev:server": "tsc && node dist/server.js",
+    "dev:query": "tsc && node dist/query.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -18,11 +22,15 @@
   "dependencies": {
     "axios": "^1.9.0",
     "dotenv": "^16.5.0",
-    "openai": "^4.97.0"
+    "express": "^4.19.2",
+    "openai": "^4.97.0",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
+    "@types/express": "^4.17.21",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.15.11",
+    "@types/sqlite3": "^3.1.11",
     "typescript": "^5.8.3"
   }
 }
