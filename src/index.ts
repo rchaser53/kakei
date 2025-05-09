@@ -2,6 +2,8 @@ import fs from "fs";
 import OpenAI from "openai";
 import dotenv from "dotenv";
 import { parseAndSaveCSV, closeDatabase, createDatabaseConnection, initializeDatabase } from "./db.js";
+import path from "path";
+import { DATABASE_PATH } from "./constants.js";
 
 // 環境変数を読み込む
 dotenv.config();
@@ -47,7 +49,7 @@ async function main(): Promise<void> {
     const base64Image = fs.readFileSync(imagePath, { encoding: "base64" });
     
     // データベース接続を作成
-    const db = createDatabaseConnection();
+    const db = createDatabaseConnection(DATABASE_PATH);
     
     // データベースを初期化
     initializeDatabase(db);
@@ -101,7 +103,7 @@ async function main(): Promise<void> {
     console.error("Error:", error);
     // エラーが発生した場合もデータベース接続を閉じる
     try {
-      const db = createDatabaseConnection();
+      const db = createDatabaseConnection(DATABASE_PATH);
       await closeDatabase(db);
     } catch (err) {
       console.error("データベース接続を閉じる際にエラーが発生しました:", err);

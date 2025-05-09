@@ -1,4 +1,5 @@
 import { getAllReceipts, closeDatabase, createDatabaseConnection } from './db.js';
+import { DATABASE_PATH } from './constants.js';
 
 // 合計金額を計算する関数
 function calculateTotal(receipts: any[]): number {
@@ -8,7 +9,7 @@ function calculateTotal(receipts: any[]): number {
 // メイン関数
 async function main(): Promise<void> {
   // データベース接続を作成
-  const db = createDatabaseConnection();
+  const db = createDatabaseConnection(DATABASE_PATH);
   
   try {
     // レシートデータを取得

@@ -1,25 +1,18 @@
 import sqlite3 from 'sqlite3';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-// ES Moduleでの__dirnameの代替
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// データベースの設定
-const dbPath = path.join(__dirname, '../database.sqlite');
+import { DATABASE_PATH } from './constants.js';
 
 /**
  * データベース接続を作成する関数
+ * @param dbPath データベースファイルのパス
  * @returns sqlite3.Database
  */
-export function createDatabaseConnection(): sqlite3.Database {
+export function createDatabaseConnection(dbPath: string): sqlite3.Database {
   return new sqlite3.Database(dbPath);
 }
 
 // デフォルトのデータベース接続
-const defaultDb = createDatabaseConnection();
+const defaultDb = createDatabaseConnection(DATABASE_PATH);
 
 /**
  * テーブルの作成

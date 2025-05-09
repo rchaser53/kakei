@@ -7,11 +7,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "hello": "node dist/hello.js",
-    "server": "node dist/server.js",
     "query": "node dist/query.js",
     "dev": "tsc && node dist/index.js",
     "dev:hello": "tsc && node dist/hello.js",
-    "dev:server": "tsc && node dist/server.js",
     "dev:query": "tsc && node dist/query.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
