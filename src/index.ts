@@ -15,17 +15,43 @@ const openai = new OpenAI({
   apiKey,
 });
 
-const imagePath = "./PXL_20250506_053306419.jpg"; 
-const base64Image = fs.readFileSync(imagePath, { encoding: "base64" });
+// コマンドライン引数からイメージパスを取得
+function getImagePathFromArgs(): string {
+  const args = process.argv.slice(2);
+  
+  // 引数がない場合はヘルプを表示して終了
+  if (args.length === 0) {
+    console.log("使用方法: node dist/index.js <画像ファイルパス>");
+    console.log("例: node dist/index.js ./images/receipt.jpg");
+    process.exit(1);
+  }
+  
+  const imagePath = args[0];
+  
+  // ファイルが存在するか確認
+  if (!fs.existsSync(imagePath)) {
+    console.error(`エラー: ファイル '${imagePath}' が見つかりません。`);
+    process.exit(1);
+  }
+  
+  return imagePath;
+}
 
 async function main(): Promise<void> {
-  // データベース接続を作成
-  const db = createDatabaseConnection();
-  
-  // データベースを初期化
-  initializeDatabase(db);
-  
   try {
+    // 画像パスを取得
+    const imagePath = getImagePathFromArgs();
+    console.log(`処理する画像: ${imagePath}`);
+    
+    // 画像ファイルを読み込む
+    const base64Image = fs.readFileSync(imagePath, { encoding: "base64" });
+    
+    // データベース接続を作成
+    const db = createDatabaseConnection();
+    
+    // データベースを初期化
+    initializeDatabase(db);
+    
     // 型アサーションを使用してAPIの型エラーを回避
     const requestBody = {
       model: "gpt-4.1-mini",
@@ -74,7 +100,12 @@ async function main(): Promise<void> {
   } catch (error) {
     console.error("Error:", error);
     // エラーが発生した場合もデータベース接続を閉じる
-    await closeDatabase(db).catch((err: Error) => console.error("データベース接続を閉じる際にエラーが発生しました:", err));
+    try {
+      const db = createDatabaseConnection();
+      await closeDatabase(db);
+    } catch (err) {
+      console.error("データベース接続を閉じる際にエラーが発生しました:", err);
+    }
   }
 }
 
