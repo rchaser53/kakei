@@ -5,6 +5,7 @@ import { parseAndSaveCSV, closeDatabase, createDatabaseConnection, initializeDat
 import path from "path";
 import { DATABASE_PATH } from "./constants.js";
 import sqlite3 from "sqlite3";
+import crypto from "crypto";
 
 // 環境変数を読み込む
 dotenv.config();
@@ -64,11 +65,46 @@ function getAllJpgFiles(dirPath: string): string[] {
   return jpgFiles;
 }
 
+// 画像からハッシュを生成する関数
+function generateImageHash(imagePath: string): string {
+  // 画像ファイルを読み込む
+  const imageBuffer = fs.readFileSync(imagePath);
+  
+  // SHA-256ハッシュを生成
+  const hash = crypto.createHash('sha256');
+  hash.update(imageBuffer);
+  return hash.digest('hex');
+}
+
+// データベースに画像ハッシュが存在するか確認する関数
+async function isImageHashExists(imageHash: string, db: sqlite3.Database): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    db.get('SELECT 1 FROM receipts WHERE image_hash = ?', [imageHash], (err, row) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(!!row); // rowが存在すればtrue、存在しなければfalse
+    });
+  });
+}
+
 // 画像を処理してデータベースに保存
 async function processImage(imagePath: string, db: sqlite3.Database): Promise<void> {
   console.log(`処理する画像: ${imagePath}`);
   
   try {
+    // 画像からハッシュを生成
+    const imageHash = generateImageHash(imagePath);
+    console.log(`画像ハッシュ: ${imageHash}`);
+    
+    // データベースに同じハッシュが存在するか確認
+    const exists = await isImageHashExists(imageHash, db);
+    if (exists) {
+      console.log(`画像ハッシュ ${imageHash} のレコードは既に存在します。スキップします。`);
+      return;
+    }
+    
     // 画像ファイルを読み込む
     const base64Image = fs.readFileSync(imagePath, { encoding: "base64" });
     
@@ -108,8 +144,12 @@ async function processImage(imagePath: string, db: sqlite3.Database): Promise<vo
     console.log(csvData);
     
     // CSVデータをSQLiteに保存
-    await parseAndSaveCSV(csvData, db);
-    console.log(`${imagePath} のデータベースへの保存が完了しました`);
+    const inserted = await parseAndSaveCSV(csvData, imageHash, db);
+    if (inserted) {
+      console.log(`${imagePath} のデータベースへの保存が完了しました`);
+    } else {
+      console.log(`${imagePath} は既に処理済みです。スキップしました。`);
+    }
     
   } catch (error) {
     console.error(`${imagePath} の処理中にエラーが発生しました:`, error);

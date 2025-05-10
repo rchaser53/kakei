@@ -16,11 +16,13 @@ async function main(): Promise<void> {
     const receipts = await getAllReceipts(db);
     
     console.log('=== レシートデータ ===');
-    console.log('ID | 品名 | 金額 | 作成日時');
-    console.log('------------------------');
+    console.log('ID | 画像ハッシュ | 品名 | 金額 | 作成日時');
+    console.log('----------------------------------------------');
     
     receipts.forEach(receipt => {
-      console.log(`${receipt.id} | ${receipt.item} | ${receipt.price} | ${receipt.created_at}`);
+      // ハッシュ値は長いので最初の8文字だけ表示
+      const shortHash = receipt.image_hash ? receipt.image_hash.substring(0, 8) + '...' : 'N/A';
+      console.log(`${receipt.id} | ${shortHash} | ${receipt.item} | ${receipt.price} | ${receipt.created_at}`);
     });
     
     // 合計金額を計算

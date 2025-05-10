@@ -23,6 +23,7 @@ export function initializeDatabase(db: sqlite3.Database = defaultDb): void {
     db.run(`
       CREATE TABLE IF NOT EXISTS receipts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        image_hash TEXT UNIQUE NOT NULL,
         item TEXT NOT NULL,
         price INTEGER NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -34,45 +35,59 @@ export function initializeDatabase(db: sqlite3.Database = defaultDb): void {
 /**
  * CSVデータを解析してSQLiteにINSERTする関数
  * @param csvString CSVフォーマットの文字列（ヘッダー行を含む）
+ * @param imageHash 画像から生成されたハッシュ値
  * @param db sqlite3.Database インスタンス
- * @returns Promise<void>
+ * @returns Promise<boolean> 挿入が成功したかどうか（重複の場合はfalse）
  */
-export function parseAndSaveCSV(csvString: string, db: sqlite3.Database = defaultDb): Promise<void> {
+export function parseAndSaveCSV(csvString: string, imageHash: string, db: sqlite3.Database = defaultDb): Promise<boolean> {
   return new Promise((resolve, reject) => {
     try {
-      // CSVの行に分割
-      const lines = csvString.trim().split('\n');
-      
-      // ヘッダー行を取得して検証
-      const header = lines[0].split(',');
-      if (header[0] !== 'item' || header[1] !== 'price') {
-        return reject(new Error('Invalid CSV format. Expected header: item,price'));
-      }
-      
-      // データ行を処理
-      const stmt = db.prepare('INSERT INTO receipts (item, price) VALUES (?, ?)');
-      
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-        
-        const [item, priceStr] = line.split(',');
-        const price = parseInt(priceStr, 10);
-        
-        if (isNaN(price)) {
-          console.warn(`Skipping invalid price in line ${i + 1}: ${line}`);
-          continue;
-        }
-        
-        stmt.run(item, price);
-      }
-      
-      stmt.finalize((err) => {
+      // まず、同じハッシュ値を持つレコードが存在するか確認
+      db.get('SELECT 1 FROM receipts WHERE image_hash = ?', [imageHash], (err, row) => {
         if (err) {
-          reject(err);
-        } else {
-          resolve();
+          return reject(err);
         }
+        
+        // 既に同じハッシュ値のレコードが存在する場合
+        if (row) {
+          console.log(`画像ハッシュ ${imageHash} のレコードは既に存在します。スキップします。`);
+          return resolve(false);
+        }
+        
+        // CSVの行に分割
+        const lines = csvString.trim().split('\n');
+        
+        // ヘッダー行を取得して検証
+        const header = lines[0].split(',');
+        if (header[0] !== 'item' || header[1] !== 'price') {
+          return reject(new Error('Invalid CSV format. Expected header: item,price'));
+        }
+        
+        // データ行を処理
+        const stmt = db.prepare('INSERT INTO receipts (image_hash, item, price) VALUES (?, ?, ?)');
+        
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+          
+          const [item, priceStr] = line.split(',');
+          const price = parseInt(priceStr, 10);
+          
+          if (isNaN(price)) {
+            console.warn(`Skipping invalid price in line ${i + 1}: ${line}`);
+            continue;
+          }
+          
+          stmt.run(imageHash, item, price);
+        }
+        
+        stmt.finalize((err) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(true);
+          }
+        });
       });
     } catch (error) {
       reject(error);
