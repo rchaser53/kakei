@@ -1,10 +1,5 @@
-import { getAllReceipts, closeDatabase, createDatabaseConnection } from './db.js';
+import { getAllReceipts, closeDatabase, createDatabaseConnection, getReceiptDetails, getReceiptTotal } from './db.js';
 import { DATABASE_PATH } from './constants.js';
-
-// 合計金額を計算する関数
-function calculateTotal(receipts: any[]): number {
-  return receipts.reduce((total, receipt) => total + receipt.price, 0);
-}
 
 // メイン関数
 async function main(): Promise<void> {
@@ -15,20 +10,39 @@ async function main(): Promise<void> {
     // レシートデータを取得
     const receipts = await getAllReceipts(db);
     
-    console.log('=== レシートデータ ===');
-    console.log('ID | 画像ハッシュ | 品名 | 金額 | 作成日時');
-    console.log('----------------------------------------------');
-    
-    receipts.forEach(receipt => {
-      // ハッシュ値は長いので最初の8文字だけ表示
-      const shortHash = receipt.image_hash ? receipt.image_hash.substring(0, 8) + '...' : 'N/A';
-      console.log(`${receipt.id} | ${shortHash} | ${receipt.item} | ${receipt.price} | ${receipt.created_at}`);
+    // レシートをハッシュでグループ化
+    const receiptsByHash: { [key: string]: any[] } = {};
+    receipts.forEach(row => {
+      if (!receiptsByHash[row.image_hash]) {
+        receiptsByHash[row.image_hash] = [];
+      }
+      receiptsByHash[row.image_hash].push(row);
     });
     
-    // 合計金額を計算
-    const total = calculateTotal(receipts);
-    console.log('------------------------');
-    console.log(`合計金額: ${total}円`);
+    // 各レシートの情報を表示
+    console.log('=== レシートデータ ===');
+    
+    for (const imageHash in receiptsByHash) {
+      const rows = receiptsByHash[imageHash];
+      const firstRow = rows[0];
+      const shortHash = imageHash.substring(0, 8) + '...';
+      const total = await getReceiptTotal(imageHash, db);
+      
+      console.log(`\nレシートID: ${firstRow.id}`);
+      console.log(`画像ハッシュ: ${shortHash}`);
+      console.log(`作成日時: ${firstRow.created_at}`);
+      console.log('------------------------');
+      console.log('品名 | 金額');
+      console.log('------------------------');
+      
+      rows.forEach(row => {
+        console.log(`${row.item} | ${row.price}円`);
+      });
+      
+      console.log('------------------------');
+      console.log(`合計金額: ${total}円`);
+      console.log('========================');
+    }
     
     // データベース接続を閉じる
     await closeDatabase(db);
