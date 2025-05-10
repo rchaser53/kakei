@@ -120,6 +120,7 @@ async function processImage(imagePath: string, db: sqlite3.Database): Promise<vo
               text: `アップロードした画像はレシートの画像です。
 小計を出すために必要な品名と金額を抜き出し、CSVのフォーマットで返却してください。
 ヘッダーは品名は「item」、金額は「price」としてください。
+ヘッダーとデータ以外に余分な文字列は含めないでください。
 ` 
             },
             {
