@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { parseAndSaveCSV, closeDatabase, createDatabaseConnection, initializeDatabase } from "./db.js";
 import path from "path";
 import { DATABASE_PATH } from "./constants.js";
+import sqlite3 from "sqlite3";
 
 // 環境変数を読み込む
 dotenv.config();
@@ -17,42 +18,59 @@ const openai = new OpenAI({
   apiKey,
 });
 
-// コマンドライン引数からイメージパスを取得
-function getImagePathFromArgs(): string {
+// コマンドライン引数からパスを取得
+function getPathFromArgs(): string {
   const args = process.argv.slice(2);
   
   // 引数がない場合はヘルプを表示して終了
   if (args.length === 0) {
-    console.log("使用方法: node dist/index.js <画像ファイルパス>");
+    console.log("使用方法: node dist/index.js <画像ファイルパスまたはディレクトリパス>");
     console.log("例: node dist/index.js ./images/receipt.jpg");
+    console.log("例: node dist/index.js ./images");
     process.exit(1);
   }
   
-  const imagePath = args[0];
+  const inputPath = args[0];
   
-  // ファイルが存在するか確認
-  if (!fs.existsSync(imagePath)) {
-    console.error(`エラー: ファイル '${imagePath}' が見つかりません。`);
+  // パスが存在するか確認
+  if (!fs.existsSync(inputPath)) {
+    console.error(`エラー: パス '${inputPath}' が見つかりません。`);
     process.exit(1);
   }
   
-  return imagePath;
+  return inputPath;
 }
 
-async function main(): Promise<void> {
-  try {
-    // 画像パスを取得
-    const imagePath = getImagePathFromArgs();
-    console.log(`処理する画像: ${imagePath}`);
+// ディレクトリ内のすべてのJPGファイルを再帰的に取得
+function getAllJpgFiles(dirPath: string): string[] {
+  let jpgFiles: string[] = [];
+  
+  // ディレクトリ内のファイルとディレクトリを取得
+  const items = fs.readdirSync(dirPath);
+  
+  for (const item of items) {
+    const itemPath = path.join(dirPath, item);
+    const stats = fs.statSync(itemPath);
     
+    if (stats.isDirectory()) {
+      // ディレクトリの場合は再帰的に処理
+      jpgFiles = jpgFiles.concat(getAllJpgFiles(itemPath));
+    } else if (stats.isFile() && /\.(jpg|jpeg)$/i.test(item)) {
+      // JPGファイルの場合はリストに追加
+      jpgFiles.push(itemPath);
+    }
+  }
+  
+  return jpgFiles;
+}
+
+// 画像を処理してデータベースに保存
+async function processImage(imagePath: string, db: sqlite3.Database): Promise<void> {
+  console.log(`処理する画像: ${imagePath}`);
+  
+  try {
     // 画像ファイルを読み込む
     const base64Image = fs.readFileSync(imagePath, { encoding: "base64" });
-    
-    // データベース接続を作成
-    const db = createDatabaseConnection(DATABASE_PATH);
-    
-    // データベースを初期化
-    initializeDatabase(db);
     
     // 型アサーションを使用してAPIの型エラーを回避
     const requestBody = {
@@ -79,8 +97,6 @@ async function main(): Promise<void> {
 
     // @ts-ignore - OpenAIのAPIの型定義に問題がある場合の回避策
     const response = await openai.responses.create(requestBody);
-
-    console.log(response);
     
     // CSVデータを取得し、マークダウン記法を削除
     let csvData = response.output_text;
@@ -93,7 +109,50 @@ async function main(): Promise<void> {
     
     // CSVデータをSQLiteに保存
     await parseAndSaveCSV(csvData, db);
-    console.log("データベースへの保存が完了しました");
+    console.log(`${imagePath} のデータベースへの保存が完了しました`);
+    
+  } catch (error) {
+    console.error(`${imagePath} の処理中にエラーが発生しました:`, error);
+  }
+}
+
+// メイン関数
+async function main(): Promise<void> {
+  // データベース接続を作成
+  const db = createDatabaseConnection(DATABASE_PATH);
+  
+  // データベースを初期化
+  initializeDatabase(db);
+  
+  try {
+    // パスを取得
+    const inputPath = getPathFromArgs();
+    
+    // パスの種類を確認
+    const stats = fs.statSync(inputPath);
+    
+    if (stats.isDirectory()) {
+      // ディレクトリの場合は、すべてのJPGファイルを取得して処理
+      console.log(`ディレクトリ ${inputPath} 内のすべてのJPGファイルを処理します...`);
+      const jpgFiles = getAllJpgFiles(inputPath);
+      
+      if (jpgFiles.length === 0) {
+        console.log(`ディレクトリ ${inputPath} 内にJPGファイルが見つかりませんでした。`);
+        return;
+      }
+      
+      console.log(`${jpgFiles.length} 個のJPGファイルが見つかりました。`);
+      
+      // 各JPGファイルを処理
+      for (const jpgFile of jpgFiles) {
+        await processImage(jpgFile, db);
+      }
+      
+      console.log(`すべてのJPGファイルの処理が完了しました。`);
+    } else {
+      // ファイルの場合は、そのファイルを処理
+      await processImage(inputPath, db);
+    }
     
     // データベース接続を閉じる
     await closeDatabase(db);
@@ -103,7 +162,6 @@ async function main(): Promise<void> {
     console.error("Error:", error);
     // エラーが発生した場合もデータベース接続を閉じる
     try {
-      const db = createDatabaseConnection(DATABASE_PATH);
       await closeDatabase(db);
     } catch (err) {
       console.error("データベース接続を閉じる際にエラーが発生しました:", err);
