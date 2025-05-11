@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import dotenv from "dotenv";
 import { parseAndSaveCSV, closeDatabase, createDatabaseConnection, initializeDatabase } from "./db.js";
 import path from "path";
-import { DATABASE_PATH } from "./constants.js";
+import { DATABASE_PATH, SUPPORTED_IMAGE_EXTENSIONS } from "./constants.js";
 import sqlite3 from "sqlite3";
 import crypto from "crypto";
 
@@ -42,12 +42,15 @@ function getPathFromArgs(): string {
   return inputPath;
 }
 
-// ディレクトリ内のすべてのJPGファイルを再帰的に取得
-function getAllJpgFiles(dirPath: string): string[] {
-  let jpgFiles: string[] = [];
+// ディレクトリ内のすべての対応画像ファイルを再帰的に取得
+function getAllImageFiles(dirPath: string): string[] {
+  let imageFiles: string[] = [];
   
   // ディレクトリ内のファイルとディレクトリを取得
   const items = fs.readdirSync(dirPath);
+  
+  // サポートされている拡張子の正規表現パターンを作成
+  const extensionPattern = new RegExp(`\\.(${SUPPORTED_IMAGE_EXTENSIONS.join('|')})$`, 'i');
   
   for (const item of items) {
     const itemPath = path.join(dirPath, item);
@@ -55,14 +58,14 @@ function getAllJpgFiles(dirPath: string): string[] {
     
     if (stats.isDirectory()) {
       // ディレクトリの場合は再帰的に処理
-      jpgFiles = jpgFiles.concat(getAllJpgFiles(itemPath));
-    } else if (stats.isFile() && /\.(jpg|jpeg)$/i.test(item)) {
-      // JPGファイルの場合はリストに追加
-      jpgFiles.push(itemPath);
+      imageFiles = imageFiles.concat(getAllImageFiles(itemPath));
+    } else if (stats.isFile() && extensionPattern.test(item)) {
+      // サポートされている画像ファイルの場合はリストに追加
+      imageFiles.push(itemPath);
     }
   }
   
-  return jpgFiles;
+  return imageFiles;
 }
 
 // 画像からハッシュを生成する関数
@@ -173,23 +176,23 @@ async function main(): Promise<void> {
     const stats = fs.statSync(inputPath);
     
     if (stats.isDirectory()) {
-      // ディレクトリの場合は、すべてのJPGファイルを取得して処理
-      console.log(`ディレクトリ ${inputPath} 内のすべてのJPGファイルを処理します...`);
-      const jpgFiles = getAllJpgFiles(inputPath);
+      // ディレクトリの場合は、すべての対応画像ファイルを取得して処理
+      console.log(`ディレクトリ ${inputPath} 内のすべての対応画像ファイルを処理します...`);
+      const imageFiles = getAllImageFiles(inputPath);
       
-      if (jpgFiles.length === 0) {
-        console.log(`ディレクトリ ${inputPath} 内にJPGファイルが見つかりませんでした。`);
+      if (imageFiles.length === 0) {
+        console.log(`ディレクトリ ${inputPath} 内に対応画像ファイルが見つかりませんでした。`);
         return;
       }
       
-      console.log(`${jpgFiles.length} 個のJPGファイルが見つかりました。`);
+      console.log(`${imageFiles.length} 個の対応画像ファイルが見つかりました。`);
       
-      // 各JPGファイルを処理
-      for (const jpgFile of jpgFiles) {
-        await processImage(jpgFile, db);
+      // 各画像ファイルを処理
+      for (const imageFile of imageFiles) {
+        await processImage(imageFile, db);
       }
       
-      console.log(`すべてのJPGファイルの処理が完了しました。`);
+      console.log(`すべての対応画像ファイルの処理が完了しました。`);
     } else {
       // ファイルの場合は、そのファイルを処理
       await processImage(inputPath, db);
