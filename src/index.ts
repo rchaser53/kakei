@@ -120,10 +120,18 @@ async function processImage(imagePath: string, db: sqlite3.Database): Promise<vo
           content: [
             { 
               type: "input_text", 
-              text: `アップロードした画像はレシートの画像です。
-小計を出すために必要な品名と金額を抜き出し、CSVのフォーマットで返却してください。
-ヘッダーは品名は「item」、金額は「price」としてください。
-ヘッダーとデータ以外に余分な文字列は含めないでください。
+              text: `アップロードされた画像がレシートかどうかを判断し、以下の形式で回答してください。
+
+もし画像がレシートの場合:
+1. 最初の行に "IS_RECEIPT: true" と記載してください。
+2. 次の行から、小計を出すために必要な品名と金額をCSVフォーマットで抽出してください。
+3. CSVのヘッダーは品名を「item」、金額を「price」としてください。
+
+もし画像がレシートでない場合:
+1. "IS_RECEIPT: false" と記載してください。
+2. その後に、画像の内容について簡単な説明を追加してください。
+
+回答は上記の形式に厳密に従ってください。
 ` 
             },
             {
@@ -138,10 +146,20 @@ async function processImage(imagePath: string, db: sqlite3.Database): Promise<vo
     // @ts-ignore - OpenAIのAPIの型定義に問題がある場合の回避策
     const response = await openai.responses.create(requestBody);
     
-    // CSVデータを取得し、マークダウン記法を削除
-    let csvData = response.output_text;
+    // レスポンスを取得
+    const responseText = response.output_text;
     
-    // マークダウンの```csv```と```を削除
+    // レシートかどうかを判断
+    if (responseText.startsWith("IS_RECEIPT: false")) {
+      console.error(`エラー: ${imagePath} はレシートではありません。処理をスキップします。`);
+      console.error(`詳細: ${responseText.split('\n').slice(1).join('\n')}`);
+      return;
+    }
+    
+    // レシートの場合、CSVデータを抽出
+    let csvData = responseText.replace(/^IS_RECEIPT: true\n/, '');
+    
+    // マークダウンの```csv```と```を削除（もし存在する場合）
     csvData = csvData.replace(/```csv\n/, '').replace(/```$/, '');
     
     console.log("整形後のCSVデータ:");
