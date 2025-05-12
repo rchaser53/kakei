@@ -8,9 +8,11 @@
     "start": "node dist/index.js",
     "hello": "node dist/hello.js",
     "query": "node dist/query.js",
+    "monthly": "node dist/monthly-total.js",
     "dev": "tsc && node dist/index.js",
     "dev:hello": "tsc && node dist/hello.js",
     "dev:query": "tsc && node dist/query.js",
+    "dev:monthly": "tsc && node dist/monthly-total.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
