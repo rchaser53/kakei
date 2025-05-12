@@ -124,8 +124,10 @@ async function processImage(imagePath: string, db: sqlite3.Database): Promise<vo
 
 もし画像がレシートの場合:
 1. 最初の行に "IS_RECEIPT: true" と記載してください。
-2. 次の行から、小計を出すために必要な品名と金額をCSVフォーマットで抽出してください。
-3. CSVのヘッダーは品名を「item」、金額を「price」としてください。
+2. 次の行から、店舗名と合計金額をCSVフォーマットで抽出してください。
+3. CSVのヘッダーは店舗名を「store_name」、合計金額を「total_amount」としてください。
+4. 店舗名が明確でない場合は「不明な店舗」と記載してください。
+5. 合計金額は数値のみを抽出してください（例: 1200）。
 
 もし画像がレシートでない場合:
 1. "IS_RECEIPT: false" と記載してください。

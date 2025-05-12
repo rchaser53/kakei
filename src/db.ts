@@ -1,5 +1,4 @@
 import sqlite3 from 'sqlite3';
-import path from 'path';
 import { DATABASE_PATH } from './constants.js';
 
 /**
@@ -29,13 +28,13 @@ export function initializeDatabase(db: sqlite3.Database = defaultDb): void {
       )
     `);
     
-    // receipt_itemsテーブル - レシートの品目情報
+    // receipt_itemsテーブル - レシートの店舗名と合計金額情報
     db.run(`
       CREATE TABLE IF NOT EXISTS receipt_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         image_hash TEXT NOT NULL,
-        item TEXT NOT NULL,
-        price INTEGER NOT NULL,
+        store_name TEXT NOT NULL,
+        total_amount INTEGER NOT NULL,
         FOREIGN KEY (image_hash) REFERENCES receipts(image_hash)
       )
     `);
@@ -82,13 +81,13 @@ export function parseAndSaveCSV(csvString: string, imageHash: string, db: sqlite
             
             // ヘッダー行を取得して検証
             const header = lines[0].split(',');
-            if (header[0] !== 'item' || header[1] !== 'price') {
-              db.run('ROLLBACK', () => reject(new Error('Invalid CSV format. Expected header: item,price')));
+            if (header[0] !== 'store_name' || header[1] !== 'total_amount') {
+              db.run('ROLLBACK', () => reject(new Error('Invalid CSV format. Expected header: store_name,total_amount')));
               return;
             }
             
             // データ行を処理
-            const stmt = db.prepare('INSERT INTO receipt_items (image_hash, item, price) VALUES (?, ?, ?)');
+            const stmt = db.prepare('INSERT INTO receipt_items (image_hash, store_name, total_amount) VALUES (?, ?, ?)');
             
             let hasError = false;
             
@@ -96,15 +95,15 @@ export function parseAndSaveCSV(csvString: string, imageHash: string, db: sqlite
               const line = lines[i].trim();
               if (!line) continue;
               
-              const [item, priceStr] = line.split(',');
-              const price = parseInt(priceStr, 10);
+              const [storeName, totalAmountStr] = line.split(',');
+              const totalAmount = parseInt(totalAmountStr, 10);
               
-              if (isNaN(price)) {
-                console.warn(`Skipping invalid price in line ${i + 1}: ${line}`);
+              if (isNaN(totalAmount)) {
+                console.warn(`Skipping invalid total amount in line ${i + 1}: ${line}`);
                 continue;
               }
               
-              stmt.run(imageHash, item, price, (err: Error | null) => {
+              stmt.run(imageHash, storeName, totalAmount, (err: Error | null) => {
                 if (err && !hasError) {
                   hasError = true;
                   db.run('ROLLBACK', () => reject(err));
@@ -145,7 +144,7 @@ export function parseAndSaveCSV(csvString: string, imageHash: string, db: sqlite
 export function getAllReceipts(db: sqlite3.Database = defaultDb): Promise<any[]> {
   return new Promise((resolve, reject) => {
     const query = `
-      SELECT r.id, r.image_hash, r.created_at, ri.item, ri.price
+      SELECT r.id, r.image_hash, r.created_at, ri.store_name, ri.total_amount
       FROM receipts r
       JOIN receipt_items ri ON r.image_hash = ri.image_hash
       ORDER BY r.id ASC, ri.id ASC
@@ -170,7 +169,7 @@ export function getAllReceipts(db: sqlite3.Database = defaultDb): Promise<any[]>
 export function getReceiptTotal(imageHash: string, db: sqlite3.Database = defaultDb): Promise<number> {
   return new Promise((resolve, reject) => {
     const query = `
-      SELECT SUM(price) as total
+      SELECT SUM(total_amount) as total
       FROM receipt_items
       WHERE image_hash = ?
     `;
@@ -214,6 +213,94 @@ export function getReceiptDetails(imageHash: string, db: sqlite3.Database = defa
           items
         });
       });
+    });
+  });
+}
+
+/**
+ * 指定した月のレシート金額の合計を取得する関数
+ * @param year 年（例: 2025）
+ * @param month 月（1〜12）
+ * @param db sqlite3.Database インスタンス
+ * @returns Promise<number> 指定した月の合計金額
+ */
+export function getMonthlyTotal(year: number, month: number, db: sqlite3.Database = defaultDb): Promise<number> {
+  return new Promise((resolve, reject) => {
+    // 月の範囲チェック
+    if (month < 1 || month > 12) {
+      return reject(new Error('月は1から12の間で指定してください'));
+    }
+    
+    // 指定した月の開始日と終了日を計算
+    const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
+    
+    // 次の月の初日を計算（月が12月の場合は翌年の1月）
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const nextYear = month === 12 ? year + 1 : year;
+    const endDate = `${nextYear}-${nextMonth.toString().padStart(2, '0')}-01`;
+    
+    const query = `
+      SELECT SUM(ri.total_amount) as total
+      FROM receipts r
+      JOIN receipt_items ri ON r.image_hash = ri.image_hash
+      WHERE r.created_at >= ? AND r.created_at < ?
+    `;
+    
+    db.get(query, [startDate, endDate], (err, row: any) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(row?.total || 0);
+      }
+    });
+  });
+}
+
+/**
+ * 指定した月のレシート詳細情報を取得する関数
+ * @param year 年（例: 2025）
+ * @param month 月（1〜12）
+ * @param db sqlite3.Database インスタンス
+ * @returns Promise<{receipts: any[], total: number}> 指定した月のレシート情報と合計金額
+ */
+export function getMonthlyReceiptDetails(year: number, month: number, db: sqlite3.Database = defaultDb): Promise<{receipts: any[], total: number}> {
+  return new Promise((resolve, reject) => {
+    // 月の範囲チェック
+    if (month < 1 || month > 12) {
+      return reject(new Error('月は1から12の間で指定してください'));
+    }
+    
+    // 指定した月の開始日と終了日を計算
+    const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
+    
+    // 次の月の初日を計算（月が12月の場合は翌年の1月）
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const nextYear = month === 12 ? year + 1 : year;
+    const endDate = `${nextYear}-${nextMonth.toString().padStart(2, '0')}-01`;
+    
+    const query = `
+      SELECT r.id, r.image_hash, r.created_at, ri.store_name, ri.total_amount
+      FROM receipts r
+      JOIN receipt_items ri ON r.image_hash = ri.image_hash
+      WHERE r.created_at >= ? AND r.created_at < ?
+      ORDER BY r.created_at ASC, r.id ASC, ri.id ASC
+    `;
+    
+    db.all(query, [startDate, endDate], async (err, rows: any[]) => {
+      if (err) {
+        reject(err);
+      } else {
+        // 合計金額を計算
+        let total = 0;
+        rows.forEach((row: any) => {
+          total += row.total_amount;
+        });
+        
+        resolve({
+          receipts: rows,
+          total: total
+        });
+      }
     });
   });
 }

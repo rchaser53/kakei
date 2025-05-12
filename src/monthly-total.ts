@@ -102,13 +102,13 @@ async function main(): Promise<void> {
         
         console.log(`\n[${formattedDate}] レシートID: ${firstRow.id}`);
         console.log('------------------------');
-        console.log('品名 | 金額');
+        console.log('店舗名 | 合計金額');
         console.log('------------------------');
         
         let receiptTotal = 0;
         rows.forEach(row => {
-          console.log(`${row.item} | ${row.price}円`);
-          receiptTotal += row.price;
+          console.log(`${row.store_name} | ${row.total_amount}円`);
+          receiptTotal += row.total_amount;
         });
         
         console.log('------------------------');
