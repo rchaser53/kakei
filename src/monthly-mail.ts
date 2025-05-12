@@ -4,15 +4,20 @@ import { authenticate } from '@google-cloud/local-auth';
 import { google } from 'googleapis';
 import { createDatabaseConnection, closeDatabase, getMonthlyTotal, getMonthlyReceiptDetails } from './db.js';
 import { DATABASE_PATH } from './constants.js';
+import dotenv from 'dotenv';
+
+// 環境変数を読み込む
+dotenv.config();
 
 // Gmail APIのスコープ
 const SCOPES = ['https://www.googleapis.com/auth/gmail.send'];
+
 // トークンとクレデンシャルのパス
-const TOKEN_PATH = path.join(process.cwd(), 'token.json');
-const CREDENTIALS_PATH = path.join(process.cwd(), 'credentials.json');
+const TOKEN_PATH = path.join(process.cwd(), process.env.GMAIL_TOKEN_PATH || 'token.json');
+const CREDENTIALS_PATH = path.join(process.cwd(), process.env.GMAIL_CREDENTIALS_PATH || 'credentials.json');
 
 // 送信先メールアドレス
-const TO_EMAIL = 'dusk41@gmail.com';
+const TO_EMAIL = process.env.GMAIL_TO_EMAIL || 'dusk41@gmail.com';
 
 /**
  * 保存された認証情報を読み込む関数
