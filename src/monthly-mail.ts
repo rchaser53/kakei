@@ -142,6 +142,15 @@ function getMonthName(month: number): string {
 }
 
 /**
+ * 10円単位で切り下げる関数
+ * @param {number} amount 
+ * @returns {number}
+ */
+function roundDownToTen(amount: number): number {
+  return Math.floor(amount / 10) * 10;
+}
+
+/**
  * 月次レポートを生成する関数
  * @param {number} year 
  * @param {number} month 
@@ -161,6 +170,15 @@ async function generateMonthlyReport(year: number, month: number): Promise<strin
     if (details.receipts.length === 0) {
       report += `${year}年${getMonthName(month)}のレシートデータはありません。\n`;
     } else {
+      // 合計金額と請求金額を最初に表示
+      const totalAmount = details.total;
+      const billingAmount = roundDownToTen(Math.floor(totalAmount / 2));
+      
+      report += `========================\n`;
+      report += `【請求金額】 ${billingAmount}円 (合計金額の1/2を10円単位で切り下げ)\n`;
+      report += `【合計金額】 ${totalAmount}円\n`;
+      report += `========================\n\n`;
+      
       // レシートをハッシュでグループ化
       const receiptsByHash: { [key: string]: any[] } = {};
       details.receipts.forEach(row => {
@@ -195,7 +213,6 @@ async function generateMonthlyReport(year: number, month: number): Promise<strin
       }
       
       report += '========================\n';
-      report += `${year}年${getMonthName(month)}の合計金額: ${details.total}円\n`;
     }
     
     // データベース接続を閉じる
