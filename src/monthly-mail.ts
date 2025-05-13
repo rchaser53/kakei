@@ -5,6 +5,7 @@ import { google } from 'googleapis';
 import { createDatabaseConnection, closeDatabase, getMonthlyTotal, getMonthlyReceiptDetails } from './db.js';
 import { DATABASE_PATH } from './constants.js';
 import dotenv from 'dotenv';
+import { table } from 'table';
 
 // 環境変数を読み込む
 dotenv.config();
@@ -188,29 +189,32 @@ async function generateMonthlyReport(year: number, month: number): Promise<strin
         receiptsByHash[row.image_hash].push(row);
       });
       
-      // 各レシートの情報を追加
+      // レシート情報をテーブル形式で表示
       report += `合計 ${Object.keys(receiptsByHash).length} 件のレシート\n\n`;
       
+      // テーブルデータの準備
+      const tableData = [
+        ['日付', '店舗名', '合計金額'] // ヘッダー行
+      ];
+      
+      // 各レシートの情報を配列に追加
       for (const imageHash in receiptsByHash) {
         const rows = receiptsByHash[imageHash];
         const firstRow = rows[0];
         const date = new Date(firstRow.created_at);
         const formattedDate = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
         
-        report += `[${formattedDate}] レシートID: ${firstRow.id}\n`;
-        report += '------------------------\n';
-        report += '店舗名 | 合計金額\n';
-        report += '------------------------\n';
-        
-        let receiptTotal = 0;
         rows.forEach(row => {
-          report += `${row.store_name} | ${row.total_amount}円\n`;
-          receiptTotal += row.total_amount;
+          tableData.push([
+            formattedDate,
+            row.store_name,
+            `${row.total_amount}円`
+          ]);
         });
-        
-        report += '------------------------\n';
-        report += `小計: ${receiptTotal}円\n\n`;
       }
+      
+      // テーブルを生成して追加（設定なしでデフォルト設定を使用）
+      report += table(tableData);
       
       report += '========================\n';
     }
