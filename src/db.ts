@@ -27,14 +27,15 @@ export function initializeDatabase(db: sqlite3.Database = defaultDb): void {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    
-    // receipt_itemsテーブル - レシートの店舗名と合計金額情報
+
+    // receipt_itemsテーブル - レシートの店舗名、合計金額、日付情報
     db.run(`
       CREATE TABLE IF NOT EXISTS receipt_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         image_hash TEXT NOT NULL,
         store_name TEXT NOT NULL,
         total_amount INTEGER NOT NULL,
+        receipt_date TEXT,
         FOREIGN KEY (image_hash) REFERENCES receipts(image_hash)
       )
     `);
@@ -48,7 +49,11 @@ export function initializeDatabase(db: sqlite3.Database = defaultDb): void {
  * @param db sqlite3.Database インスタンス
  * @returns Promise<boolean> 挿入が成功したかどうか（重複の場合はfalse）
  */
-export function parseAndSaveCSV(csvString: string, imageHash: string, db: sqlite3.Database = defaultDb): Promise<boolean> {
+export function parseAndSaveCSV(
+  csvString: string,
+  imageHash: string,
+  db: sqlite3.Database = defaultDb
+): Promise<boolean> {
   return new Promise((resolve, reject) => {
     try {
       // まず、同じハッシュ値を持つレコードが存在するか確認
@@ -56,54 +61,62 @@ export function parseAndSaveCSV(csvString: string, imageHash: string, db: sqlite
         if (err) {
           return reject(err);
         }
-        
+
         // 既に同じハッシュ値のレコードが存在する場合
         if (row) {
           console.log(`画像ハッシュ ${imageHash} のレコードは既に存在します。スキップします。`);
           return resolve(false);
         }
-        
+
         // トランザクションを開始
-        db.run('BEGIN TRANSACTION', (err) => {
+        db.run('BEGIN TRANSACTION', err => {
           if (err) {
             return reject(err);
           }
-          
+
           // まず、receiptsテーブルにレコードを挿入
-          db.run('INSERT INTO receipts (image_hash) VALUES (?)', [imageHash], function(err) {
+          db.run('INSERT INTO receipts (image_hash) VALUES (?)', [imageHash], function (err) {
             if (err) {
               db.run('ROLLBACK', () => reject(err));
               return;
             }
-            
+
             // CSVの行に分割
             const lines = csvString.trim().split('\n');
-            
+
             // ヘッダー行を取得して検証
             const header = lines[0].split(',');
             if (header[0] !== 'store_name' || header[1] !== 'total_amount') {
-              db.run('ROLLBACK', () => reject(new Error('Invalid CSV format. Expected header: store_name,total_amount')));
+              db.run('ROLLBACK', () =>
+                reject(new Error('Invalid CSV format. Expected header: store_name,total_amount'))
+              );
               return;
             }
-            
+
             // データ行を処理
-            const stmt = db.prepare('INSERT INTO receipt_items (image_hash, store_name, total_amount) VALUES (?, ?, ?)');
-            
+            const stmt = db.prepare(
+              'INSERT INTO receipt_items (image_hash, store_name, total_amount, receipt_date) VALUES (?, ?, ?, ?)'
+            );
+
             let hasError = false;
-            
+
             for (let i = 1; i < lines.length; i++) {
               const line = lines[i].trim();
               if (!line) continue;
-              
-              const [storeName, totalAmountStr] = line.split(',');
+
+              const parts = line.split(',');
+              const storeName = parts[0];
+              const totalAmountStr = parts[1];
+              const receiptDate = parts.length > 2 ? parts[2] : null;
+
               const totalAmount = parseInt(totalAmountStr, 10);
-              
+
               if (isNaN(totalAmount)) {
                 console.warn(`Skipping invalid total amount in line ${i + 1}: ${line}`);
                 continue;
               }
-              
-              stmt.run(imageHash, storeName, totalAmount, (err: Error | null) => {
+
+              stmt.run(imageHash, storeName, totalAmount, receiptDate, (err: Error | null) => {
                 if (err && !hasError) {
                   hasError = true;
                   db.run('ROLLBACK', () => reject(err));
@@ -111,15 +124,15 @@ export function parseAndSaveCSV(csvString: string, imageHash: string, db: sqlite
                 }
               });
             }
-            
-            stmt.finalize((err) => {
+
+            stmt.finalize(err => {
               if (err) {
                 db.run('ROLLBACK', () => reject(err));
                 return;
               }
-              
+
               // トランザクションをコミット
-              db.run('COMMIT', (err) => {
+              db.run('COMMIT', err => {
                 if (err) {
                   db.run('ROLLBACK', () => reject(err));
                   return;
@@ -149,7 +162,7 @@ export function getAllReceipts(db: sqlite3.Database = defaultDb): Promise<any[]>
       JOIN receipt_items ri ON r.image_hash = ri.image_hash
       ORDER BY r.id ASC, ri.id ASC
     `;
-    
+
     db.all(query, (err, rows) => {
       if (err) {
         reject(err);
@@ -166,14 +179,17 @@ export function getAllReceipts(db: sqlite3.Database = defaultDb): Promise<any[]>
  * @param db sqlite3.Database インスタンス
  * @returns Promise<number>
  */
-export function getReceiptTotal(imageHash: string, db: sqlite3.Database = defaultDb): Promise<number> {
+export function getReceiptTotal(
+  imageHash: string,
+  db: sqlite3.Database = defaultDb
+): Promise<number> {
   return new Promise((resolve, reject) => {
     const query = `
       SELECT SUM(total_amount) as total
       FROM receipt_items
       WHERE image_hash = ?
     `;
-    
+
     db.get(query, [imageHash], (err, row: any) => {
       if (err) {
         reject(err);
@@ -190,29 +206,36 @@ export function getReceiptTotal(imageHash: string, db: sqlite3.Database = defaul
  * @param db sqlite3.Database インスタンス
  * @returns Promise<{receipt: any, items: any[]}>
  */
-export function getReceiptDetails(imageHash: string, db: sqlite3.Database = defaultDb): Promise<{receipt: any, items: any[]}> {
+export function getReceiptDetails(
+  imageHash: string,
+  db: sqlite3.Database = defaultDb
+): Promise<{ receipt: any; items: any[] }> {
   return new Promise((resolve, reject) => {
     // レシート基本情報を取得
     db.get('SELECT * FROM receipts WHERE image_hash = ?', [imageHash], (err, receipt) => {
       if (err) {
         return reject(err);
       }
-      
+
       if (!receipt) {
         return reject(new Error(`Receipt with hash ${imageHash} not found`));
       }
-      
+
       // レシート品目情報を取得
-      db.all('SELECT * FROM receipt_items WHERE image_hash = ? ORDER BY id ASC', [imageHash], (err, items) => {
-        if (err) {
-          return reject(err);
+      db.all(
+        'SELECT * FROM receipt_items WHERE image_hash = ? ORDER BY id ASC',
+        [imageHash],
+        (err, items) => {
+          if (err) {
+            return reject(err);
+          }
+
+          resolve({
+            receipt,
+            items,
+          });
         }
-        
-        resolve({
-          receipt,
-          items
-        });
-      });
+      );
     });
   });
 }
@@ -224,28 +247,32 @@ export function getReceiptDetails(imageHash: string, db: sqlite3.Database = defa
  * @param db sqlite3.Database インスタンス
  * @returns Promise<number> 指定した月の合計金額
  */
-export function getMonthlyTotal(year: number, month: number, db: sqlite3.Database = defaultDb): Promise<number> {
+export function getMonthlyTotal(
+  year: number,
+  month: number,
+  db: sqlite3.Database = defaultDb
+): Promise<number> {
   return new Promise((resolve, reject) => {
     // 月の範囲チェック
     if (month < 1 || month > 12) {
       return reject(new Error('月は1から12の間で指定してください'));
     }
-    
+
     // 指定した月の開始日と終了日を計算
     const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
-    
+
     // 次の月の初日を計算（月が12月の場合は翌年の1月）
     const nextMonth = month === 12 ? 1 : month + 1;
     const nextYear = month === 12 ? year + 1 : year;
     const endDate = `${nextYear}-${nextMonth.toString().padStart(2, '0')}-01`;
-    
+
     const query = `
       SELECT SUM(ri.total_amount) as total
       FROM receipts r
       JOIN receipt_items ri ON r.image_hash = ri.image_hash
       WHERE r.created_at >= ? AND r.created_at < ?
     `;
-    
+
     db.get(query, [startDate, endDate], (err, row: any) => {
       if (err) {
         reject(err);
@@ -263,29 +290,33 @@ export function getMonthlyTotal(year: number, month: number, db: sqlite3.Databas
  * @param db sqlite3.Database インスタンス
  * @returns Promise<{receipts: any[], total: number}> 指定した月のレシート情報と合計金額
  */
-export function getMonthlyReceiptDetails(year: number, month: number, db: sqlite3.Database = defaultDb): Promise<{receipts: any[], total: number}> {
+export function getMonthlyReceiptDetails(
+  year: number,
+  month: number,
+  db: sqlite3.Database = defaultDb
+): Promise<{ receipts: any[]; total: number }> {
   return new Promise((resolve, reject) => {
     // 月の範囲チェック
     if (month < 1 || month > 12) {
       return reject(new Error('月は1から12の間で指定してください'));
     }
-    
+
     // 指定した月の開始日と終了日を計算
     const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
-    
+
     // 次の月の初日を計算（月が12月の場合は翌年の1月）
     const nextMonth = month === 12 ? 1 : month + 1;
     const nextYear = month === 12 ? year + 1 : year;
     const endDate = `${nextYear}-${nextMonth.toString().padStart(2, '0')}-01`;
-    
+
     const query = `
-      SELECT r.id, r.image_hash, r.created_at, ri.store_name, ri.total_amount
+      SELECT r.id, r.image_hash, r.created_at, ri.store_name, ri.total_amount, ri.receipt_date
       FROM receipts r
       JOIN receipt_items ri ON r.image_hash = ri.image_hash
       WHERE r.created_at >= ? AND r.created_at < ?
       ORDER BY r.created_at ASC, r.id ASC, ri.id ASC
     `;
-    
+
     db.all(query, [startDate, endDate], async (err, rows: any[]) => {
       if (err) {
         reject(err);
@@ -295,10 +326,10 @@ export function getMonthlyReceiptDetails(year: number, month: number, db: sqlite
         rows.forEach((row: any) => {
           total += row.total_amount;
         });
-        
+
         resolve({
           receipts: rows,
-          total: total
+          total: total,
         });
       }
     });
@@ -312,7 +343,7 @@ export function getMonthlyReceiptDetails(year: number, month: number, db: sqlite
  */
 export function closeDatabase(db: sqlite3.Database = defaultDb): Promise<void> {
   return new Promise((resolve, reject) => {
-    db.close((err) => {
+    db.close(err => {
       if (err) {
         reject(err);
       } else {
