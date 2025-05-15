@@ -190,7 +190,7 @@ async function generateMonthlyReport(year: number, month: number): Promise<strin
       });
       
       // レシート情報をテーブル形式で表示
-      report += `合計 ${Object.keys(receiptsByHash).length} 件のレシート\n\n`;
+      report += `合計 ${Object.keys(receiptsByHash).length} 件のレシート`;
       
       // テーブルデータの準備
       const tableData = [
@@ -213,8 +213,29 @@ async function generateMonthlyReport(year: number, month: number): Promise<strin
         });
       }
       
-      // テーブルを生成して追加（設定なしでデフォルト設定を使用）
-      report += table(tableData);
+      // HTMLテーブルを生成
+      const htmlTable = `
+        <table border="1" cellpadding="5" cellspacing="0">
+          <thead>
+            <tr>
+              <th>日付</th>
+              <th>店舗名</th>
+              <th>合計金額</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableData.slice(1).map(row => `
+              <tr>
+                <td>${row[0]}</td>
+                <td>${row[1]}</td>
+                <td>${row[2]}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+      
+      report += htmlTable;
       
       report += '========================\n';
     }
@@ -236,10 +257,10 @@ async function generateMonthlyReport(year: number, month: number): Promise<strin
  * メールを送信する関数
  * @param {any} auth 認証済みのOAuth2クライアント
  * @param {string} subject メールの件名
- * @param {string} messageText メール本文
+ * @param {string} messageHtml メール本文 (HTML)
  * @returns {Promise<any>}
  */
-async function sendEmail(auth: any, subject: string, messageText: string) {
+async function sendEmail(auth: any, subject: string, messageHtml: string) {
   const gmail = google.gmail({version: 'v1', auth});
   
   // メールの作成
@@ -247,11 +268,11 @@ async function sendEmail(auth: any, subject: string, messageText: string) {
   const messageParts = [
     'From: me',
     `To: ${TO_EMAIL}`,
-    'Content-Type: text/plain; charset=utf-8',
+    'Content-Type: text/html; charset=utf-8',
     'MIME-Version: 1.0',
     `Subject: ${utf8Subject}`,
     '',
-    messageText,
+    messageHtml,
   ];
   const message = messageParts.join('\n');
 
@@ -287,11 +308,18 @@ async function main() {
     // コマンドライン引数から年と月を取得
     const { year, month } = getYearMonthFromArgs();
     
-    // 月次レポートを生成
-    const report = await generateMonthlyReport(year, month);
+    // 月次レポートを生成 (HTML)
+    const reportHtml = `
+      <html>
+        <body>
+          <h1>${year}年${getMonthName(month)}の家計簿レポート</h1>
+          <pre>${await generateMonthlyReport(year, month)}</pre>
+        </body>
+      </html>
+    `;
     
     // レポートをコンソールに表示
-    console.log(report);
+    console.log(reportHtml);
     
     // 認証を行う
     const auth = await authorize();
@@ -300,7 +328,7 @@ async function main() {
     const subject = `${year}年${getMonthName(month)}の家計簿レポート`;
     
     // メールを送信
-    await sendEmail(auth, subject, report);
+    await sendEmail(auth, subject, reportHtml);
     
   } catch (error) {
     console.error('エラー:', error);
