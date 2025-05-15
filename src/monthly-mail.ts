@@ -217,24 +217,50 @@ async function generateMonthlyReport(year: number, month: number): Promise<strin
         ['日付', '店舗名', '合計金額'], // ヘッダー行
       ];
 
+      // 日付でソートするためのデータを準備
+      const receiptData: {
+        date: Date;
+        formattedDate: string;
+        storeName: string;
+        amount: string;
+      }[] = [];
+
       // 各レシートの情報を配列に追加
       for (const imageHash in receiptsByHash) {
         const rows = receiptsByHash[imageHash];
         const firstRow = rows[0];
+
         // レシートの日付を取得（receipt_dateがあればそれを使用、なければcreated_atを使用）
-        let formattedDate;
+        let dateObj: Date;
+        let formattedDate: string;
+
         if (firstRow.receipt_date) {
+          // YYYY-MM-DD形式の文字列をDateオブジェクトに変換
+          dateObj = new Date(firstRow.receipt_date);
           // YYYY-MM-DD形式をYYYY/MM/DD形式に変換
           formattedDate = firstRow.receipt_date.replace(/-/g, '/');
         } else {
-          const date = new Date(firstRow.created_at);
-          formattedDate = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
+          dateObj = new Date(firstRow.created_at);
+          formattedDate = `${dateObj.getFullYear()}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getDate().toString().padStart(2, '0')}`;
         }
 
         rows.forEach(row => {
-          tableData.push([formattedDate, row.store_name, `${row.total_amount}円`]);
+          receiptData.push({
+            date: dateObj,
+            formattedDate: formattedDate,
+            storeName: row.store_name,
+            amount: `${row.total_amount}円`,
+          });
         });
       }
+
+      // 日付で昇順ソート
+      receiptData.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+      // ソートされたデータをテーブルデータに追加
+      receiptData.forEach(item => {
+        tableData.push([item.formattedDate, item.storeName, item.amount]);
+      });
 
       // HTMLテーブルを生成
       const htmlTable = `
