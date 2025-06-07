@@ -1,0 +1,179 @@
+/* 全体のスタイル */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Hiragino Kaku Gothic ProN', 'メイリオ', sans-serif;
+  line-height: 1.6;
+  color: #333;
+  background-color: #f5f5f5;
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* ヘッダーのスタイル */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #ddd;
+}
+
+h1 {
+  font-size: 28px;
+  color: #2c3e50;
+}
+
+.month-selector {
+  min-width: 200px;
+}
+
+select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  background-color: white;
+}
+
+/* メインコンテンツのスタイル */
+main {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 30px;
+}
+
+.summary-section, .receipts-section {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+h2 {
+  font-size: 22px;
+  margin-bottom: 20px;
+  color: #2c3e50;
+}
+
+.total-amount, .receipt-count {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+#total-amount {
+  font-weight: bold;
+  color: #e74c3c;
+  font-size: 24px;
+}
+
+#receipt-count {
+  font-weight: bold;
+  color: #3498db;
+}
+
+/* レシートリストのスタイル */
+.receipts-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.receipt-card {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 15px;
+  background-color: #fff;
+  transition: transform 0.2s;
+}
+
+.receipt-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.receipt-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.receipt-date {
+  font-weight: bold;
+  color: #7f8c8d;
+}
+
+.receipt-id {
+  color: #95a5a6;
+  font-size: 14px;
+}
+
+.receipt-details {
+  margin-bottom: 15px;
+}
+
+.receipt-store {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.receipt-amount {
+  text-align: right;
+  font-weight: bold;
+  color: #e74c3c;
+}
+
+.no-data, .loading {
+  text-align: center;
+  padding: 30px;
+  color: #7f8c8d;
+  font-style: italic;
+}
+
+/* Vue.js用のトランジションスタイル */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+[v-cloak] {
+  display: none;
+}
+
+/* フッターのスタイル */
+footer {
+  margin-top: 40px;
+  text-align: center;
+  color: #7f8c8d;
+  font-size: 14px;
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 768px) {
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .month-selector {
+    width: 100%;
+    margin-top: 15px;
+  }
+}

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>家計簿アプリ</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Vue.js v3 CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body>
+  <div id="app" class="container">
+    <header>
+      <h1>家計簿アプリ</h1>
+      <div class="month-selector">
+        <select v-model="selectedMonth">
+          <option value="">月を選択してください</option>
+          <option v-for="month in availableMonths" :key="month.value" :value="month.value">
+            {{ month.label }}
+          </option>
+        </select>
+      </div>
+    </header>
+
+    <main>
+      <div class="summary-section">
+        <h2>{{ currentMonthTitle }}</h2>
+        <div class="total-amount">
+          <span>合計金額: </span>
+          <span>{{ totalAmount.toLocaleString() }}</span>
+          <span>円</span>
+        </div>
+        <div class="receipt-count">
+          <span>レシート数: </span>
+          <span>{{ receiptCount }}</span>
+          <span>件</span>
+        </div>
+      </div>
+
+      <div class="receipts-section">
+        <h2>レシート一覧</h2>
+        <div class="receipts-container">
+          <!-- レシートのリストがここに表示されます -->
+          <div v-if="loading" class="loading">
+            データを読み込み中...
+          </div>
+          <div v-else-if="receipts.length === 0" class="no-data">
+            {{ noDataMessage }}
+          </div>
+          <div v-else>
+            <div v-for="receipt in receipts" :key="receipt.id" class="receipt-card">
+              <div class="receipt-header">
+                <div class="receipt-date">{{ formatDate(receipt.created_at) }}</div>
+                <div class="receipt-id">レシートID: {{ receipt.id }}</div>
+              </div>
+              <div class="receipt-details">
+                <div class="receipt-store">{{ receipt.store_name }}</div>
+                <div class="receipt-amount">{{ receipt.total_amount.toLocaleString() }}円</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <p>&copy; 2025 家計簿アプリ</p>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
