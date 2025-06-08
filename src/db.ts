@@ -26,7 +26,7 @@ export function initializeDatabase(db: sqlite3.Database = defaultDb): void {
         image_hash TEXT UNIQUE NOT NULL,
         store_name TEXT NOT NULL,
         total_amount INTEGER NOT NULL,
-        receipt_date TEXT,
+        receipt_date DATE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -279,8 +279,8 @@ export function getMonthlyReceiptDetails(
     const query = `
       SELECT id, image_hash, store_name, total_amount, receipt_date, created_at
       FROM receipts
-      WHERE created_at >= ? AND created_at < ?
-      ORDER BY created_at ASC, id ASC
+      WHERE receipt_date >= ? AND receipt_date < ?
+      ORDER BY receipt_date ASC, id ASC
     `;
 
     db.all(query, [startDate, endDate], async (err, rows: any[]) => {

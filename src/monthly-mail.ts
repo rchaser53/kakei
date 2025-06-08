@@ -227,22 +227,15 @@ async function generateMonthlyReport(year: number, month: number): Promise<strin
 
       // 各レシートの情報を配列に追加
       for (const imageHash in receiptsByHash) {
+
         const rows = receiptsByHash[imageHash];
         const firstRow = rows[0];
 
-        // レシートの日付を取得（receipt_dateがあればそれを使用、なければcreated_atを使用）
+        // レシートの日付は必ずreceipt_dateを利用する
         let dateObj: Date;
         let formattedDate: string;
-
-        if (firstRow.receipt_date) {
-          // YYYY-MM-DD形式の文字列をDateオブジェクトに変換
-          dateObj = new Date(firstRow.receipt_date);
-          // YYYY-MM-DD形式をYYYY/MM/DD形式に変換
-          formattedDate = firstRow.receipt_date.replace(/-/g, '/');
-        } else {
-          dateObj = new Date(firstRow.created_at);
-          formattedDate = `${dateObj.getFullYear()}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getDate().toString().padStart(2, '0')}`;
-        }
+        dateObj = new Date(firstRow.receipt_date);
+        formattedDate = firstRow.receipt_date ? firstRow.receipt_date.replace(/-/g, '/') : '';
 
         rows.forEach(row => {
           receiptData.push({
