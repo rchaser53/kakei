@@ -57,6 +57,12 @@
                 <div class="receipt-store">{{ receipt.store_name }}</div>
                 <div class="receipt-amount">{{ receipt.total_amount.toLocaleString() }}円</div>
               </div>
+              <div class="receipt-use-image">
+                <label>
+                  <input type="checkbox" :checked="!!receipt.use_image" @change="toggleUseImage(receipt)" />
+                  手動入力
+                </label>
+              </div>
             </div>
           </div>
         </div>

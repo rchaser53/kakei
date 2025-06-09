@@ -6,6 +6,7 @@ import {
   createDatabaseConnection,
   closeDatabase,
   getMonthlyReceiptDetails,
+  updateUseImage
 } from './db.js';
 import { DATABASE_PATH } from './constants.js';
 
@@ -16,8 +17,31 @@ const __dirname = dirname(__filename);
 const app = express();
 const port = 3000;
 
-// JSONボディパーサーを有効化
+
+// JSONボディパーサーを有効化（必ずルーティングより前に記述）
 app.use(express.json());
+
+// use_imageカラムを更新するAPI
+app.put('/api/receipts/:imageHash/use-image', async (req, res) => {
+  const imageHash = req.params.imageHash;
+  const { use_image } = req.body;
+  if (typeof use_image !== 'boolean') {
+    return res.status(400).json({ error: 'use_imageはbooleanで指定してください' });
+  }
+  const db = createDatabaseConnection(DATABASE_PATH);
+  try {
+    await updateUseImage(imageHash, use_image, db);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('エラー:', error);
+    res.status(500).json({ error: 'サーバーエラーが発生しました。' });
+  } finally {
+    await closeDatabase(db).catch(err =>
+      console.error('データベース接続を閉じる際にエラーが発生しました:', err)
+    );
+  }
+});
+
 
 // 静的ファイルを提供
 app.use(express.static(path.join(__dirname, '../public')));
@@ -54,8 +78,8 @@ app.get('/api/available-months', async (req, res) => {
     // データベースから利用可能な年月のリストを取得
     const query = `
       SELECT 
-        strftime('%Y', created_at) as year,
-        strftime('%m', created_at) as month
+        strftime('%Y', receipt_date) as year,
+        strftime('%m', receipt_date) as month
       FROM receipts
       GROUP BY year, month
       ORDER BY year DESC, month DESC

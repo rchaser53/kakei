@@ -122,6 +122,22 @@ createApp({
     // コンポーネントがマウントされたときに初期化
     onMounted(fetchAvailableMonths);
 
+    // use_image更新API呼び出し
+    async function toggleUseImage(receipt) {
+      const newValue = !receipt.use_image;
+      try {
+        const response = await fetch(`/api/receipts/${receipt.image_hash}/use-image`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ use_image: newValue })
+        });
+        if (!response.ok) throw new Error('更新に失敗しました');
+        receipt.use_image = newValue;
+      } catch (e) {
+        alert('use_imageの更新に失敗しました');
+      }
+    }
+
     // テンプレートで使用する値とメソッドを返す
     return {
       selectedMonth,
@@ -132,7 +148,8 @@ createApp({
       noDataMessage,
       currentMonthTitle,
       receiptCount,
-      formatDate
+      formatDate,
+      toggleUseImage
     };
   }
 }).mount('#app');

@@ -1,3 +1,29 @@
+/**
+ * receiptsテーブルのuse_imageカラムを更新する関数
+ * @param imageHash レシートの画像ハッシュ
+ * @param useImage 手動入力ならfalse, 画像由来ならtrue
+ * @param db sqlite3.Database インスタンス
+ * @returns Promise<void>
+ */
+export function updateUseImage(
+  imageHash: string,
+  useImage: boolean,
+  db: sqlite3.Database = defaultDb
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    db.run(
+      'UPDATE receipts SET use_image = ? WHERE image_hash = ?',
+      [useImage ? 1 : 0, imageHash],
+      function (err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      }
+    );
+  });
+}
 import sqlite3 from 'sqlite3';
 import { DATABASE_PATH } from './constants.js';
 
@@ -238,7 +264,7 @@ export function getMonthlyTotal(
     const query = `
       SELECT SUM(total_amount) as total
       FROM receipts
-      WHERE created_at >= ? AND created_at < ?
+      WHERE receipt_date >= ? AND receipt_date < ?
     `;
 
     db.get(query, [startDate, endDate], (err, row: any) => {
