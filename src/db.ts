@@ -27,7 +27,8 @@ export function initializeDatabase(db: sqlite3.Database = defaultDb): void {
         store_name TEXT NOT NULL,
         total_amount INTEGER NOT NULL,
         receipt_date DATE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        use_image BOOLEAN NOT NULL DEFAULT 0
       )
     `);
   });
@@ -79,7 +80,7 @@ export function parseAndSaveCSV(
 
           // データ行を処理
           const stmt = db.prepare(
-            'INSERT INTO receipts (image_hash, store_name, total_amount, receipt_date) VALUES (?, ?, ?, ?)'
+            'INSERT INTO receipts (image_hash, store_name, total_amount, receipt_date, use_image) VALUES (?, ?, ?, ?, ?)' 
           );
 
           let hasError = false;
@@ -100,7 +101,7 @@ export function parseAndSaveCSV(
               continue;
             }
 
-            stmt.run(imageHash, storeName, totalAmount, receiptDate, (err: Error | null) => {
+            stmt.run(imageHash, storeName, totalAmount, receiptDate, false, (err: Error | null) => {
               if (err && !hasError) {
                 hasError = true;
                 db.run('ROLLBACK', () => reject(err));
