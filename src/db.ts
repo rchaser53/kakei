@@ -167,7 +167,7 @@ export function parseAndSaveCSV(
 export function getAllReceipts(db: sqlite3.Database = defaultDb): Promise<any[]> {
   return new Promise((resolve, reject) => {
     const query = `
-      SELECT id, image_hash, store_name, total_amount, receipt_date, created_at
+      SELECT id, image_hash, store_name, total_amount, receipt_date, created_at, use_image
       FROM receipts
       ORDER BY id ASC
     `;
@@ -304,7 +304,7 @@ export function getMonthlyReceiptDetails(
     const endDate = `${nextYear}-${nextMonth.toString().padStart(2, '0')}-01`;
 
     const query = `
-      SELECT id, image_hash, store_name, total_amount, receipt_date, created_at
+      SELECT id, image_hash, store_name, total_amount, receipt_date, created_at, use_image
       FROM receipts
       WHERE receipt_date >= ? AND receipt_date < ?
       ORDER BY receipt_date ASC, id ASC
@@ -314,9 +314,10 @@ export function getMonthlyReceiptDetails(
       if (err) {
         reject(err);
       } else {
-        // 合計金額を計算
+        // use_imageをboolean型に変換しつつ合計金額を計算
         let total = 0;
         rows.forEach((row: any) => {
+          row.use_image = !!row.use_image;
           total += row.total_amount;
         });
 

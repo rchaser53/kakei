@@ -59,7 +59,7 @@
               </div>
               <div class="receipt-use-image">
                 <label>
-                  <input type="checkbox" :checked="!!receipt.use_image" @change="toggleUseImage(receipt)" />
+                  <input type="checkbox" v-model="receipt.use_image" @change="toggleUseImage(receipt)" />
                   手動入力
                 </label>
               </div>
