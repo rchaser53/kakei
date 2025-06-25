@@ -44,7 +44,7 @@ app.put('/api/receipts/:imageHash/use-image', async (req, res) => {
 
 
 // 静的ファイルを提供
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(express.static(path.join(__dirname, '../dist/frontend')));
 
 // 月ごとのレシート情報を取得するAPIエンドポイント
 app.get('/api/receipts/:year/:month', async (req, res) => {
@@ -110,7 +110,7 @@ app.get('/api/available-months', async (req, res) => {
 
 // ルートパスへのアクセス
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
+  res.sendFile(path.join(__dirname, '../dist/frontend/index.html'));
 });
 
 // サーバーを起動
