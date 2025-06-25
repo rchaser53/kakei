@@ -113,6 +113,36 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/frontend/index.html'));
 });
 
+
+// 手動レシート登録API
+app.post('/api/receipts/manual', async (req, res) => {
+  const { store_name, total_amount, receipt_date, use_image } = req.body;
+  if (!store_name || !total_amount || !receipt_date) {
+    return res.status(400).json({ error: 'store_name, total_amount, receipt_dateは必須です' });
+  }
+  const db = createDatabaseConnection(DATABASE_PATH);
+  try {
+    // image_hashは手動登録なのでユニークな値を生成（例: store+date+amount+timestamp）
+    const image_hash = `manual_${store_name}_${receipt_date}_${total_amount}_${Date.now()}`;
+    await new Promise((resolve, reject) => {
+      db.run(
+        'INSERT INTO receipts (image_hash, store_name, total_amount, receipt_date, use_image) VALUES (?, ?, ?, ?, ?)',
+        [image_hash, store_name, total_amount, receipt_date, !!use_image],
+        function (err) {
+          if (err) reject(err);
+          else resolve(true);
+        }
+      );
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('登録エラー:', error);
+    res.status(500).json({ error: '登録に失敗しました' });
+  } finally {
+    await closeDatabase(db).catch(() => {});
+  }
+});
+
 // サーバーを起動
 app.listen(port, () => {
   console.log(`サーバーが http://localhost:${port} で起動しました`);

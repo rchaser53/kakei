@@ -43,7 +43,7 @@ async function registerProduct() {
         store_name: storeName.value,
         total_amount: totalAmount.value,
         receipt_date: receiptDate.value,
-        use_image: false
+        use_image: true
       })
     });
     if (!res.ok) throw new Error('登録に失敗しました');
