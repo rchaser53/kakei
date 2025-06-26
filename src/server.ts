@@ -97,13 +97,14 @@ app.get('/', (req, res) => {
 
 // 手動レシート登録API
 app.post('/api/receipts/manual', async (req, res) => {
-  const { store_name, total_amount, receipt_date, use_image } = req.body;
+  const { store_name, total_amount, receipt_date } = req.body;
   if (!store_name || !total_amount || !receipt_date) {
     return res.status(400).json({ error: 'store_name, total_amount, receipt_dateは必須です' });
   }
   const db = createDatabaseConnection(DATABASE_PATH);
   try {
-    await insertManualReceipt(store_name, total_amount, receipt_date, !!use_image, db);
+    // 手動登録の場合はuse_imageを常に1（true）にする
+    await insertManualReceipt(store_name, total_amount, receipt_date, true, db);
     res.json({ success: true });
   } catch (error) {
     console.error('登録エラー:', error);
