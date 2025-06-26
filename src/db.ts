@@ -349,3 +349,69 @@ export function closeDatabase(db: sqlite3.Database = defaultDb): Promise<void> {
 
 // デフォルトのデータベース接続を初期化
 initializeDatabase(defaultDb);
+
+/**
+ * 手動でレシートを登録する関数
+ * @param store_name 店舗名
+ * @param total_amount 合計金額
+ * @param receipt_date レシート日付
+ * @param use_image 画像を使うかどうか
+ * @param db sqlite3.Database インスタンス
+ * @returns Promise<boolean> 登録が成功したかどうか
+ */
+export function insertManualReceipt(
+  store_name: string,
+  total_amount: number,
+  receipt_date: string,
+  use_image: boolean,
+  db: sqlite3.Database = defaultDb
+): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    // image_hashは手動登録なのでユニークな値を生成（例: store+date+amount+timestamp）
+    const image_hash = `manual_${store_name}_${receipt_date}_${total_amount}_${Date.now()}`;
+    
+    db.run(
+      'INSERT INTO receipts (image_hash, store_name, total_amount, receipt_date, use_image) VALUES (?, ?, ?, ?, ?)',
+      [image_hash, store_name, total_amount, receipt_date, !!use_image],
+      function (err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(true);
+        }
+      }
+    );
+  });
+}
+
+/**
+ * 利用可能な年月のリストを取得する関数
+ * @param db sqlite3.Database インスタンス
+ * @returns Promise<{year: number, month: number}[]> 利用可能な年月のリスト
+ */
+export function getAvailableMonths(
+  db: sqlite3.Database = defaultDb
+): Promise<{year: number, month: number}[]> {
+  return new Promise((resolve, reject) => {
+    const query = `
+      SELECT 
+        strftime('%Y', receipt_date) as year,
+        strftime('%m', receipt_date) as month
+      FROM receipts
+      GROUP BY year, month
+      ORDER BY year DESC, month DESC
+    `;
+
+    db.all(query, (err, rows: any[]) => {
+      if (err) {
+        reject(err);
+      } else {
+        const availableMonths = rows.map(row => ({
+          year: parseInt(row.year, 10),
+          month: parseInt(row.month, 10)
+        }));
+        resolve(availableMonths);
+      }
+    });
+  });
+}

@@ -6,7 +6,9 @@ import {
   createDatabaseConnection,
   closeDatabase,
   getMonthlyReceiptDetails,
-  updateUseImage
+  updateUseImage,
+  insertManualReceipt,
+  getAvailableMonths
 } from './db.js';
 import { DATABASE_PATH } from './constants.js';
 
@@ -75,29 +77,8 @@ app.get('/api/available-months', async (req, res) => {
   const db = createDatabaseConnection(DATABASE_PATH);
 
   try {
-    // データベースから利用可能な年月のリストを取得
-    const query = `
-      SELECT 
-        strftime('%Y', receipt_date) as year,
-        strftime('%m', receipt_date) as month
-      FROM receipts
-      GROUP BY year, month
-      ORDER BY year DESC, month DESC
-    `;
-
-    db.all(query, (err, rows: any[]) => {
-      if (err) {
-        console.error('エラー:', err);
-        return res.status(500).json({ error: 'サーバーエラーが発生しました。' });
-      }
-
-      const availableMonths = rows.map(row => ({
-        year: parseInt(row.year, 10),
-        month: parseInt(row.month, 10)
-      }));
-
-      res.json(availableMonths);
-    });
+    const availableMonths = await getAvailableMonths(db);
+    res.json(availableMonths);
   } catch (error) {
     console.error('エラー:', error);
     res.status(500).json({ error: 'サーバーエラーが発生しました。' });
@@ -122,18 +103,7 @@ app.post('/api/receipts/manual', async (req, res) => {
   }
   const db = createDatabaseConnection(DATABASE_PATH);
   try {
-    // image_hashは手動登録なのでユニークな値を生成（例: store+date+amount+timestamp）
-    const image_hash = `manual_${store_name}_${receipt_date}_${total_amount}_${Date.now()}`;
-    await new Promise((resolve, reject) => {
-      db.run(
-        'INSERT INTO receipts (image_hash, store_name, total_amount, receipt_date, use_image) VALUES (?, ?, ?, ?, ?)',
-        [image_hash, store_name, total_amount, receipt_date, !!use_image],
-        function (err) {
-          if (err) reject(err);
-          else resolve(true);
-        }
-      );
-    });
+    await insertManualReceipt(store_name, total_amount, receipt_date, !!use_image, db);
     res.json({ success: true });
   } catch (error) {
     console.error('登録エラー:', error);
