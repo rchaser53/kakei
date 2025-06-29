@@ -386,35 +386,4 @@ watch(selectedMonth, fetchReceipts);
   background: #dc3545;
   color: #fff;
 }
-
-/* ダークモード対応 */
-[data-theme="dark"] .action-bar {
-  background: #343a40;
-  border-color: #495057;
-}
-
-[data-theme="dark"] .receipt-card {
-  background: #343a40;
-  border-color: #495057;
-}
-
-[data-theme="dark"] .receipt-card.selected {
-  background: #1a1d29;
-  border-color: #007bff;
-}
-
-[data-theme="dark"] .mode-toggle button,
-[data-theme="dark"] .bulk-actions button,
-[data-theme="dark"] .delete-single-btn {
-  background: #495057;
-  color: #fff;
-}
-
-[data-theme="dark"] .mode-toggle button.active {
-  background: #007bff;
-}
-
-[data-theme="dark"] .bulk-actions button.active {
-  background: #6c757d;
-}
 </style>
