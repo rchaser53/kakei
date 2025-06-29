@@ -8,7 +8,9 @@ import {
   getMonthlyReceiptDetails,
   updateUseImage,
   insertManualReceipt,
-  getAvailableMonths
+  getAvailableMonths,
+  deleteReceipt,
+  deleteMultipleReceipts
 } from './db.js';
 import { DATABASE_PATH } from './constants.js';
 
@@ -109,6 +111,58 @@ app.post('/api/receipts/manual', async (req, res) => {
   } catch (error) {
     console.error('登録エラー:', error);
     res.status(500).json({ error: '登録に失敗しました' });
+  } finally {
+    await closeDatabase(db).catch(() => {});
+  }
+});
+
+// 単一レシート削除API
+app.delete('/api/receipts/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    return res.status(400).json({ error: '無効なIDです' });
+  }
+  
+  const db = createDatabaseConnection(DATABASE_PATH);
+  try {
+    const deleted = await deleteReceipt(id, db);
+    if (deleted) {
+      res.json({ success: true, message: 'レシートを削除しました' });
+    } else {
+      res.status(404).json({ error: 'レシートが見つかりません' });
+    }
+  } catch (error) {
+    console.error('削除エラー:', error);
+    res.status(500).json({ error: '削除に失敗しました' });
+  } finally {
+    await closeDatabase(db).catch(() => {});
+  }
+});
+
+// 複数レシート一括削除API
+app.delete('/api/receipts', async (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'IDの配列が必要です' });
+  }
+  
+  // 全てのIDが数値かチェック
+  const validIds = ids.filter(id => Number.isInteger(id) && id > 0);
+  if (validIds.length === 0) {
+    return res.status(400).json({ error: '有効なIDが含まれていません' });
+  }
+  
+  const db = createDatabaseConnection(DATABASE_PATH);
+  try {
+    const deletedCount = await deleteMultipleReceipts(validIds, db);
+    res.json({ 
+      success: true, 
+      message: `${deletedCount}件のレシートを削除しました`,
+      deletedCount 
+    });
+  } catch (error) {
+    console.error('一括削除エラー:', error);
+    res.status(500).json({ error: '一括削除に失敗しました' });
   } finally {
     await closeDatabase(db).catch(() => {});
   }

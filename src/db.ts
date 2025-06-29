@@ -415,3 +415,68 @@ export function getAvailableMonths(
     });
   });
 }
+
+/**
+ * 指定したIDのレシートを削除する関数
+ * @param id レシートのID
+ * @param db sqlite3.Database インスタンス
+ * @returns Promise<boolean> 削除が成功したかどうか
+ */
+export function deleteReceipt(
+  id: number,
+  db: sqlite3.Database = defaultDb
+): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    db.run('DELETE FROM receipts WHERE id = ?', [id], function (err) {
+      if (err) {
+        reject(err);
+      } else {
+        // this.changes が 1 以上なら削除成功
+        resolve(this.changes > 0);
+      }
+    });
+  });
+}
+
+/**
+ * 複数のレシートを一括削除する関数
+ * @param ids レシートIDの配列
+ * @param db sqlite3.Database インスタンス
+ * @returns Promise<number> 削除されたレコード数
+ */
+export function deleteMultipleReceipts(
+  ids: number[],
+  db: sqlite3.Database = defaultDb
+): Promise<number> {
+  return new Promise((resolve, reject) => {
+    if (ids.length === 0) {
+      return resolve(0);
+    }
+
+    // トランザクションを開始
+    db.run('BEGIN TRANSACTION', err => {
+      if (err) {
+        return reject(err);
+      }
+
+      const placeholders = ids.map(() => '?').join(',');
+      const query = `DELETE FROM receipts WHERE id IN (${placeholders})`;
+
+      db.run(query, ids, function (err) {
+        if (err) {
+          db.run('ROLLBACK', () => reject(err));
+          return;
+        }
+
+        // トランザクションをコミット
+        db.run('COMMIT', err => {
+          if (err) {
+            db.run('ROLLBACK', () => reject(err));
+            return;
+          }
+          resolve(this.changes);
+        });
+      });
+    });
+  });
+}
