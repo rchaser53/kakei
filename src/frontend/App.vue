@@ -22,7 +22,7 @@ import { ref } from 'vue';
 import RegisterProduct from './components/RegisterProduct.vue';
 import ReceiptList from './components/ReceiptList.vue';
 
-const currentView = ref<'register' | 'list'>('register');
+const currentView = ref<'register' | 'list'>('list');
 </script>
 
 <style>

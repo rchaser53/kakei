@@ -77,7 +77,13 @@ import MonthSelector from './MonthSelector.vue';
 const receipts = ref<any[]>([]);
 const loading = ref<boolean>(false);
 const noDataMessage = ref<string>('');
-const selectedMonth = ref<string>('');
+
+// 当月を初期値として設定
+const now = new Date();
+const currentYear = now.getFullYear();
+const currentMonth = now.getMonth() + 1;
+const selectedMonth = ref<string>(`${currentYear}-${currentMonth}`);
+
 const deleteMode = ref<boolean>(false);
 const selectedReceiptIds = ref<number[]>([]);
 
