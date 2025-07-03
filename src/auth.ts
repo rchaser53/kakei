@@ -52,28 +52,6 @@ export function createSessionTable(db: Database): Promise<void> {
 }
 
 /**
- * ユーザーを作成する関数
- */
-export function createUser(db: Database, username: string, password: string): Promise<number> {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const passwordHash = await bcrypt.hash(password, 10);
-      const query = `INSERT INTO users (username, password_hash) VALUES (?, ?)`;
-      
-      db.run(query, [username, passwordHash], function(err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(this.lastID);
-        }
-      });
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
-
-/**
  * ユーザー認証を行う関数
  */
 export function authenticateUser(db: Database, username: string, password: string): Promise<number | null> {

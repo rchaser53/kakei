@@ -20,8 +20,7 @@ import {
   authenticateUser,
   createSession,
   deleteSession,
-  cleanupExpiredSessions,
-  createUser
+  cleanupExpiredSessions
 } from './auth.js';
 import { requireAuth, checkAuth } from './middleware.js';
 
@@ -107,35 +106,6 @@ app.post('/api/auth/logout', async (req, res) => {
   
   res.clearCookie('session-id');
   res.json({ success: true, message: 'ログアウトしました' });
-});
-
-// ユーザー登録API（開発用）
-app.post('/api/auth/register', async (req, res) => {
-  const { username, password } = req.body;
-  
-  if (!username || !password) {
-    return res.status(400).json({ error: 'ユーザー名とパスワードが必要です' });
-  }
-  
-  if (password.length < 6) {
-    return res.status(400).json({ error: 'パスワードは6文字以上である必要があります' });
-  }
-  
-  const db = createDatabaseConnection(DATABASE_PATH);
-  
-  try {
-    const userId = await createUser(db, username, password);
-    res.json({ success: true, message: 'ユーザーを作成しました', userId });
-  } catch (error: any) {
-    console.error('ユーザー作成エラー:', error);
-    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      res.status(400).json({ error: 'このユーザー名は既に使用されています' });
-    } else {
-      res.status(500).json({ error: 'サーバーエラーが発生しました' });
-    }
-  } finally {
-    await closeDatabase(db);
-  }
 });
 
 // 認証状態確認API

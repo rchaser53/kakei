@@ -3,7 +3,7 @@
     <div class="login-container">
       <div class="login-header">
         <h1>🏠 家計簿アプリ</h1>
-        <p>{{ isRegisterMode ? '新規アカウント作成' : 'ログインしてご利用ください' }}</p>
+        <p>ログインしてご利用ください</p>
       </div>
 
       <div v-if="errorMessage" class="error-message">
@@ -11,7 +11,7 @@
       </div>
 
       <!-- ログインフォーム -->
-      <form v-if="!isRegisterMode" @submit.prevent="handleLogin">
+      <form @submit.prevent="handleLogin">
         <div class="form-group">
           <label for="username">ユーザー名</label>
           <input 
@@ -39,48 +39,9 @@
         </button>
       </form>
 
-      <!-- 新規登録フォーム -->
-      <form v-else @submit.prevent="handleRegister">
-        <div class="form-group">
-          <label for="regUsername">ユーザー名</label>
-          <input 
-            type="text" 
-            id="regUsername" 
-            v-model="registerForm.username" 
-            required
-            :disabled="loading"
-          >
-        </div>
-
-        <div class="form-group">
-          <label for="regPassword">パスワード（6文字以上）</label>
-          <input 
-            type="password" 
-            id="regPassword" 
-            v-model="registerForm.password" 
-            required 
-            minlength="6"
-            :disabled="loading"
-          >
-        </div>
-
-        <button type="submit" class="login-btn" :disabled="loading">
-          {{ loading ? '登録中...' : '新規登録' }}
-        </button>
-      </form>
-
       <div class="loading" v-if="loading">
         <div class="spinner"></div>
-        <p>{{ isRegisterMode ? '登録中...' : 'ログイン中...' }}</p>
-      </div>
-
-      <div class="register-link">
-        <p>
-          {{ isRegisterMode ? '既にアカウントをお持ちの場合は' : 'アカウントをお持ちでない場合は' }}
-          <a href="#" @click.prevent="toggleMode">
-            {{ isRegisterMode ? 'ログイン' : '新規登録' }}
-          </a>
-        </p>
+        <p>ログイン中...</p>
       </div>
     </div>
   </div>
@@ -93,7 +54,6 @@ const emit = defineEmits<{
   loginSuccess: []
 }>();
 
-const isRegisterMode = ref(false);
 const loading = ref(false);
 const errorMessage = ref('');
 
@@ -101,20 +61,6 @@ const loginForm = ref({
   username: '',
   password: ''
 });
-
-const registerForm = ref({
-  username: '',
-  password: ''
-});
-
-// フォーム切り替え
-function toggleMode() {
-  isRegisterMode.value = !isRegisterMode.value;
-  errorMessage.value = '';
-  // フォームをリセット
-  loginForm.value = { username: '', password: '' };
-  registerForm.value = { username: '', password: '' };
-}
 
 // ログイン処理
 async function handleLogin() {
@@ -137,37 +83,6 @@ async function handleLogin() {
       emit('loginSuccess');
     } else {
       errorMessage.value = data.error || 'ログインに失敗しました';
-    }
-  } catch (error) {
-    errorMessage.value = 'ネットワークエラーが発生しました';
-  } finally {
-    loading.value = false;
-  }
-}
-
-// 新規登録処理
-async function handleRegister() {
-  loading.value = true;
-  errorMessage.value = '';
-  
-  try {
-    const response = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(registerForm.value),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      // 登録成功 - ログインフォームに戻る
-      alert('アカウントを作成しました。ログインしてください。');
-      isRegisterMode.value = false;
-      registerForm.value = { username: '', password: '' };
-    } else {
-      errorMessage.value = data.error || '登録に失敗しました';
     }
   } catch (error) {
     errorMessage.value = 'ネットワークエラーが発生しました';
@@ -293,23 +208,6 @@ input[type="password"]:disabled {
   border-radius: 5px;
   margin-bottom: 1rem;
   text-align: center;
-}
-
-.register-link {
-  text-align: center;
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #e1e5e9;
-}
-
-.register-link a {
-  color: #667eea;
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.register-link a:hover {
-  text-decoration: underline;
 }
 
 .loading {
