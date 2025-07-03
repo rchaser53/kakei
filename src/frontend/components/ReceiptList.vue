@@ -144,6 +144,8 @@ async function deleteReceipt(id: number) {
       method: 'DELETE'
     });
     
+    if (handleAuthError(response)) return;
+    
     if (!response.ok) {
       throw new Error('削除に失敗しました');
     }
@@ -178,6 +180,8 @@ async function deleteSelected() {
       body: JSON.stringify({ ids: selectedReceiptIds.value })
     });
     
+    if (handleAuthError(response)) return;
+    
     if (!response.ok) {
       throw new Error('一括削除に失敗しました');
     }
@@ -197,6 +201,15 @@ async function deleteSelected() {
   }
 }
 
+// 認証エラーをチェックして必要に応じてリダイレクトする関数
+function handleAuthError(response: Response) {
+  if (response.status === 401) {
+    window.location.reload();
+    return true;
+  }
+  return false;
+}
+
 async function fetchReceipts() {
   if (!selectedMonth.value) {
     receipts.value = [];
@@ -207,6 +220,9 @@ async function fetchReceipts() {
   loading.value = true;
   try {
     const res = await fetch(`/api/receipts/${year}/${month}`);
+    
+    if (handleAuthError(res)) return;
+    
     const data = await res.json();
     receipts.value = data.receipts;
     noDataMessage.value = data.receipts.length === 0 ? 'この月のレシート情報はありません' : '';
@@ -226,6 +242,9 @@ async function toggleUseImage(receipt: any) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ use_image: newValue })
     });
+    
+    if (handleAuthError(response)) return;
+    
     if (!response.ok) throw new Error('更新に失敗しました');
   } catch (e) {
     alert('use_imageの更新に失敗しました');

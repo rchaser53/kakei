@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import cookieParser from 'cookie-parser';
 import {
   createDatabaseConnection,
   closeDatabase,
@@ -13,6 +14,16 @@ import {
   deleteMultipleReceipts
 } from './db.js';
 import { DATABASE_PATH } from './constants.js';
+import {
+  createUserTable,
+  createSessionTable,
+  authenticateUser,
+  createSession,
+  deleteSession,
+  cleanupExpiredSessions,
+  createUser
+} from './auth.js';
+import { requireAuth, checkAuth } from './middleware.js';
 
 // ES Moduleでの__dirnameの代替
 const __filename = fileURLToPath(import.meta.url);
@@ -21,9 +32,122 @@ const __dirname = dirname(__filename);
 const app = express();
 const port = 3000;
 
-
-// JSONボディパーサーを有効化（必ずルーティングより前に記述）
+// ミドルウェアの設定
 app.use(express.json());
+app.use(cookieParser());
+
+// データベースの初期化
+async function initializeDatabase() {
+  const db = createDatabaseConnection(DATABASE_PATH);
+  try {
+    await createUserTable(db);
+    await createSessionTable(db);
+    await cleanupExpiredSessions(db);
+    console.log('データベース初期化完了');
+  } catch (error) {
+    console.error('データベース初期化エラー:', error);
+  } finally {
+    await closeDatabase(db);
+  }
+}
+
+// 認証関連のAPI
+
+// ログインAPI
+app.post('/api/auth/login', async (req, res) => {
+  const { username, password } = req.body;
+  
+  if (!username || !password) {
+    return res.status(400).json({ error: 'ユーザー名とパスワードが必要です' });
+  }
+  
+  const db = createDatabaseConnection(DATABASE_PATH);
+  
+  try {
+    const userId = await authenticateUser(db, username, password);
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'ユーザー名またはパスワードが間違っています' });
+    }
+    
+    const sessionId = await createSession(db, userId);
+    
+    // セッションIDをCookieに設定（24時間有効）
+    res.cookie('session-id', sessionId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000, // 24時間
+      sameSite: 'strict'
+    });
+    
+    res.json({ success: true, message: 'ログインしました' });
+  } catch (error) {
+    console.error('ログインエラー:', error);
+    res.status(500).json({ error: 'サーバーエラーが発生しました' });
+  } finally {
+    await closeDatabase(db);
+  }
+});
+
+// ログアウトAPI
+app.post('/api/auth/logout', async (req, res) => {
+  const sessionId = req.cookies['session-id'];
+  
+  if (sessionId) {
+    const db = createDatabaseConnection(DATABASE_PATH);
+    
+    try {
+      await deleteSession(db, sessionId);
+    } catch (error) {
+      console.error('セッション削除エラー:', error);
+    } finally {
+      await closeDatabase(db);
+    }
+  }
+  
+  res.clearCookie('session-id');
+  res.json({ success: true, message: 'ログアウトしました' });
+});
+
+// ユーザー登録API（開発用）
+app.post('/api/auth/register', async (req, res) => {
+  const { username, password } = req.body;
+  
+  if (!username || !password) {
+    return res.status(400).json({ error: 'ユーザー名とパスワードが必要です' });
+  }
+  
+  if (password.length < 6) {
+    return res.status(400).json({ error: 'パスワードは6文字以上である必要があります' });
+  }
+  
+  const db = createDatabaseConnection(DATABASE_PATH);
+  
+  try {
+    const userId = await createUser(db, username, password);
+    res.json({ success: true, message: 'ユーザーを作成しました', userId });
+  } catch (error: any) {
+    console.error('ユーザー作成エラー:', error);
+    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      res.status(400).json({ error: 'このユーザー名は既に使用されています' });
+    } else {
+      res.status(500).json({ error: 'サーバーエラーが発生しました' });
+    }
+  } finally {
+    await closeDatabase(db);
+  }
+});
+
+// 認証状態確認API
+app.get('/api/auth/status', checkAuth, (req, res) => {
+  res.json({ 
+    authenticated: !!req.userId,
+    userId: req.userId
+  });
+});
+
+// 静的ファイル配信（認証が必要）
+app.use('/static', express.static(path.join(__dirname, '../dist/frontend')));
 
 // use_imageカラムを更新するAPI
 app.put('/api/receipts/:imageHash/use-image', async (req, res) => {
@@ -91,11 +215,17 @@ app.get('/api/available-months', async (req, res) => {
   }
 });
 
-// ルートパスへのアクセス
+// ルートパスへのアクセス（すべてのケースでindex.htmlを返す）
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/frontend/index.html'));
 });
 
+// メインアプリ専用ルート（認証必須）
+app.get('/app', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/frontend/index.html'));
+});
+
+// 既存のAPIエンドポイントに認証を適用
 
 // 手動レシート登録API
 app.post('/api/receipts/manual', async (req, res) => {
@@ -169,6 +299,18 @@ app.delete('/api/receipts', async (req, res) => {
 });
 
 // サーバーを起動
-app.listen(port, () => {
-  console.log(`サーバーが http://localhost:${port} で起動しました`);
+async function startServer() {
+  console.log('Starting server initialization...');
+  await initializeDatabase();
+  console.log('Database initialized, starting Express server...');
+  
+  app.listen(port, () => {
+    console.log(`サーバーが http://localhost:${port} で起動しました`);
+  });
+}
+
+console.log('About to start server...');
+startServer().catch((error) => {
+  console.error('Server startup error:', error);
+  process.exit(1);
 });

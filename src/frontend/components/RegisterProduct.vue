@@ -46,7 +46,15 @@ async function registerProduct() {
         use_image: true
       })
     });
+    
+    if (res.status === 401) {
+      // 認証エラーの場合は親コンポーネントに通知するか、ページ全体をリロード
+      window.location.reload();
+      return;
+    }
+    
     if (!res.ok) throw new Error('登録に失敗しました');
+    
     successMessage.value = '登録しました';
     storeName.value = '';
     totalAmount.value = null;

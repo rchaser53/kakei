@@ -20,12 +20,22 @@ const availableMonths = ref<{ value: string; label: string }[]>([]);
 watch(() => props.modelValue, v => { selected.value = v; });
 
 async function fetchAvailableMonths() {
-  const res = await fetch('/api/available-months');
-  const data = await res.json();
-  availableMonths.value = data.map((item: any) => ({
-    value: `${item.year}-${item.month}`,
-    label: `${item.year}年${item.month}月`
-  }));
+  try {
+    const res = await fetch('/api/available-months');
+    
+    if (res.status === 401) {
+      window.location.reload();
+      return;
+    }
+    
+    const data = await res.json();
+    availableMonths.value = data.map((item: any) => ({
+      value: `${item.year}-${item.month}`,
+      label: `${item.year}年${item.month}月`
+    }));
+  } catch (error) {
+    console.error('月データの取得に失敗しました:', error);
+  }
 }
 
 function emitChange() {
