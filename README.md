@@ -8,6 +8,20 @@
 - 抽出した情報をSQLiteデータベースに保存
 - 月次レポートの生成と表示
 - 月次レポートをメールで送信
+- Webブラウザでの表示と管理
+
+## プロジェクト構成
+
+このプロジェクトはmonorepo構成で、以下のパッケージで構成されています：
+
+```
+kakei/
+├── packages/
+│   ├── backend/     # TypeScript/Node.js バックエンド
+│   └── frontend/    # Vue.js フロントエンド
+├── dist/           # ビルド出力
+└── README.md
+```
 
 ## セットアップ
 
@@ -28,6 +42,45 @@
 2. 依存パッケージをインストール
    ```
    npm install
+   ```
+
+## コマンド
+
+### ビルド
+
+```bash
+# 全体をビルド
+npm run build
+
+# バックエンドのみビルド
+npm run build:backend
+
+# フロントエンドのみビルド
+npm run build:frontend
+```
+
+### 開発サーバー
+
+```bash
+# バックエンド開発サーバー起動
+npm run dev:server
+
+# フロントエンド開発サーバー起動
+npm run dev:frontend
+```
+
+### アプリケーション実行
+
+```bash
+# レシート処理
+npm run dev
+
+# 月次レポート生成
+npm run monthly
+
+# 月次レポートをメール送信
+npm run monthly-mail
+```
    ```
 
 3. 環境変数の設定

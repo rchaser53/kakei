@@ -117,7 +117,7 @@ app.get('/api/auth/status', checkAuth, (req, res) => {
 });
 
 // 静的ファイル配信（認証が必要）
-app.use('/static', express.static(path.join(__dirname, '../dist/frontend')));
+app.use('/static', express.static(path.join(__dirname, '../../../dist/frontend')));
 
 // use_imageカラムを更新するAPI
 app.put('/api/receipts/:imageHash/use-image', async (req, res) => {
@@ -142,7 +142,7 @@ app.put('/api/receipts/:imageHash/use-image', async (req, res) => {
 
 
 // 静的ファイルを提供
-app.use(express.static(path.join(__dirname, '../dist/frontend')));
+app.use(express.static(path.join(__dirname, '../../../dist/frontend')));
 
 // 月ごとのレシート情報を取得するAPIエンドポイント
 app.get('/api/receipts/:year/:month', async (req, res) => {
@@ -187,12 +187,12 @@ app.get('/api/available-months', async (req, res) => {
 
 // ルートパスへのアクセス（すべてのケースでindex.htmlを返す）
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/frontend/index.html'));
+  res.sendFile(path.join(__dirname, '../../../dist/frontend/index.html'));
 });
 
 // メインアプリ専用ルート（認証必須）
 app.get('/app', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/frontend/index.html'));
+  res.sendFile(path.join(__dirname, '../../../dist/frontend/index.html'));
 });
 
 // 既存のAPIエンドポイントに認証を適用
