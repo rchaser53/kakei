@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import {
   parseAndSaveCSV,
   closeDatabase,
-  createDatabaseConnection,
+  createDatabaseConnectionForInit,
   initializeDatabase,
 } from './db.js';
 import path from 'path';
@@ -187,8 +187,8 @@ const processImage = async (imagePath: string, db: sqlite3.Database): Promise<vo
 
 // メイン関数
 const main = async (): Promise<void> => {
-  // データベース接続を作成
-  const db = createDatabaseConnection(DATABASE_PATH);
+  // データベース接続を作成（初期化用）
+  const db = createDatabaseConnectionForInit(DATABASE_PATH);
 
   // データベースを初期化
   initializeDatabase(db);

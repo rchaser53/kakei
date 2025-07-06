@@ -2,11 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { authenticate } from '@google-cloud/local-auth';
 import { google } from 'googleapis';
-import {
-  createDatabaseConnection,
-  closeDatabase,
-  getMonthlyReceiptDetails,
-} from './db.js';
+import { createDatabaseConnection, closeDatabase, getMonthlyReceiptDetails } from './db.js';
 import { DATABASE_PATH } from './constants.js';
 import dotenv from 'dotenv';
 

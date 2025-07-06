@@ -5,6 +5,7 @@ import { dirname } from 'path';
 import cookieParser from 'cookie-parser';
 import {
   createDatabaseConnection,
+  createDatabaseConnectionForInit,
   closeDatabase,
   getMonthlyReceiptDetails,
   updateUseImage,
@@ -37,7 +38,7 @@ app.use(cookieParser());
 
 // データベースの初期化
 const initializeDatabase = async () => {
-  const db = createDatabaseConnection(DATABASE_PATH);
+  const db = createDatabaseConnectionForInit(DATABASE_PATH);
   try {
     await createUserTable(db);
     await createSessionTable(db);
