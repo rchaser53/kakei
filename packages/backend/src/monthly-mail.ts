@@ -5,12 +5,10 @@ import { google } from 'googleapis';
 import {
   createDatabaseConnection,
   closeDatabase,
-  getMonthlyTotal,
   getMonthlyReceiptDetails,
 } from './db.js';
 import { DATABASE_PATH } from './constants.js';
 import dotenv from 'dotenv';
-import { table } from 'table';
 
 // 環境変数を読み込む
 dotenv.config();
