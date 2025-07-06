@@ -38,7 +38,7 @@ const isAuthenticated = ref(false);
 const isLoading = ref(true);
 
 // 認証状態チェック
-async function checkAuthStatus() {
+const checkAuthStatus = async () => {
   try {
     const response = await fetch('/api/auth/status');
     const data = await response.json();
@@ -49,15 +49,15 @@ async function checkAuthStatus() {
   } finally {
     isLoading.value = false;
   }
-}
+};
 
 // ログイン成功時の処理
-function handleLoginSuccess() {
+const handleLoginSuccess = () => {
   isAuthenticated.value = true;
-}
+};
 
 // ログアウト機能
-async function logout() {
+const logout = async () => {
   try {
     const response = await fetch('/api/auth/logout', {
       method: 'POST',

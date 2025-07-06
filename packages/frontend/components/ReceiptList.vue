@@ -92,13 +92,13 @@ const allSelected = computed(() => {
   return receipts.value.length > 0 && selectedReceiptIds.value.length === receipts.value.length;
 });
 
-function formatDate(dateString: string) {
+const formatDate = (dateString: string) => {
   const date = new Date(dateString);
   return `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
-}
+};
 
 // 削除モードの切り替え
-function toggleDeleteMode() {
+const toggleDeleteMode = () => {
   console.log('削除モード切り替え開始');
   
   // 現在の値を取得
@@ -122,19 +122,19 @@ function toggleDeleteMode() {
     selectedReceiptIds.value = [];
     console.log('選択をクリア');
   }
-}
+};
 
 // 全選択/全解除
-function selectAll() {
+const selectAll = () => {
   if (allSelected.value) {
     selectedReceiptIds.value = [];
   } else {
     selectedReceiptIds.value = receipts.value.map(receipt => receipt.id);
   }
-}
+};
 
 // 個別削除
-async function deleteReceipt(id: number) {
+const deleteReceipt = async (id: number) => {
   if (!confirm('このレシートを削除しますか？')) {
     return;
   }
@@ -159,10 +159,10 @@ async function deleteReceipt(id: number) {
     console.error('削除エラー:', error);
     alert('削除に失敗しました');
   }
-}
+};
 
 // 選択したレシートを一括削除
-async function deleteSelected() {
+const deleteSelected = async () => {
   if (selectedReceiptIds.value.length === 0) {
     return;
   }
@@ -199,18 +199,18 @@ async function deleteSelected() {
     console.error('一括削除エラー:', error);
     alert('一括削除に失敗しました');
   }
-}
+};
 
 // 認証エラーをチェックして必要に応じてリダイレクトする関数
-function handleAuthError(response: Response) {
+const handleAuthError = (response: Response) => {
   if (response.status === 401) {
     window.location.reload();
     return true;
   }
   return false;
-}
+};
 
-async function fetchReceipts() {
+const fetchReceipts = async () => {
   if (!selectedMonth.value) {
     receipts.value = [];
     noDataMessage.value = '月を選択してください';
@@ -232,9 +232,9 @@ async function fetchReceipts() {
   } finally {
     loading.value = false;
   }
-}
+};
 
-async function toggleUseImage(receipt: any) {
+const toggleUseImage = async (receipt: any) => {
   const newValue = receipt.use_image;
   try {
     const response = await fetch(`/api/receipts/${receipt.image_hash}/use-image`, {
@@ -249,7 +249,7 @@ async function toggleUseImage(receipt: any) {
   } catch (e) {
     alert('use_imageの更新に失敗しました');
   }
-}
+};
 
 onMounted(fetchReceipts);
 watch(selectedMonth, fetchReceipts);

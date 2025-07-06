@@ -63,7 +63,7 @@ const loginForm = ref({
 });
 
 // ログイン処理
-async function handleLogin() {
+const handleLogin = async () => {
   loading.value = true;
   errorMessage.value = '';
   

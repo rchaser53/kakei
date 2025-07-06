@@ -32,7 +32,7 @@ const TO_EMAIL = process.env.GMAIL_TO_EMAIL || 'dusk41@gmail.com';
  * 保存された認証情報を読み込む関数
  * @returns {Promise<any|null>}
  */
-async function loadSavedCredentialsIfExist(): Promise<any> {
+const loadSavedCredentialsIfExist = async (): Promise<any> => {
   try {
     const content = await fs.readFile(TOKEN_PATH);
     const credentials = JSON.parse(content.toString());
@@ -40,14 +40,14 @@ async function loadSavedCredentialsIfExist(): Promise<any> {
   } catch (err) {
     return null;
   }
-}
+};
 
 /**
  * 認証情報をファイルに保存する関数
  * @param {any} client
  * @returns {Promise<void>}
  */
-async function saveCredentials(client: any) {
+const saveCredentials = async (client: any) => {
   const content = await fs.readFile(CREDENTIALS_PATH);
   const keys = JSON.parse(content.toString());
   const key = keys.installed || keys.web;
@@ -58,13 +58,13 @@ async function saveCredentials(client: any) {
     refresh_token: client.credentials.refresh_token,
   });
   await fs.writeFile(TOKEN_PATH, payload);
-}
+};
 
 /**
  * 認証を行う関数
  * @returns {Promise<any>}
  */
-async function authorize(): Promise<any> {
+const authorize = async (): Promise<any> => {
   let client = await loadSavedCredentialsIfExist();
   if (client) {
     return client;
@@ -77,13 +77,13 @@ async function authorize(): Promise<any> {
     await saveCredentials(client);
   }
   return client;
-}
+};
 
 /**
  * コマンドライン引数から年と月を取得
  * @returns {{ year: number, month: number }}
  */
-function getYearMonthFromArgs(): { year: number; month: number } {
+const getYearMonthFromArgs = (): { year: number; month: number } => {
   const args = process.argv.slice(2);
 
   // 引数がない場合は現在の年月を使用
@@ -137,14 +137,14 @@ function getYearMonthFromArgs(): { year: number; month: number } {
     year: now.getFullYear(),
     month: now.getMonth() + 1,
   };
-}
+};
 
 /**
  * 月の名前を取得する関数
  * @param {number} month
  * @returns {string}
  */
-function getMonthName(month: number): string {
+const getMonthName = (month: number): string => {
   const monthNames = [
     '1月',
     '2月',
@@ -160,16 +160,16 @@ function getMonthName(month: number): string {
     '12月',
   ];
   return monthNames[month - 1];
-}
+};
 
 /**
  * 10円単位で切り下げる関数
  * @param {number} amount
  * @returns {number}
  */
-function roundDownToTen(amount: number): number {
+const roundDownToTen = (amount: number): number => {
   return Math.floor(amount / 10) * 10;
-}
+};
 
 /**
  * 月次レポートを生成する関数
@@ -177,7 +177,7 @@ function roundDownToTen(amount: number): number {
  * @param {number} month
  * @returns {Promise<string>}
  */
-async function generateMonthlyReport(year: number, month: number): Promise<string> {
+const generateMonthlyReport = async (year: number, month: number): Promise<string> => {
   // データベース接続を作成
   const db = createDatabaseConnection(DATABASE_PATH);
 
@@ -227,7 +227,6 @@ async function generateMonthlyReport(year: number, month: number): Promise<strin
 
       // 各レシートの情報を配列に追加
       for (const imageHash in receiptsByHash) {
-
         const rows = receiptsByHash[imageHash];
         const firstRow = rows[0];
 
@@ -298,7 +297,7 @@ async function generateMonthlyReport(year: number, month: number): Promise<strin
     );
     throw error;
   }
-}
+};
 
 /**
  * メールを送信する関数
@@ -307,7 +306,7 @@ async function generateMonthlyReport(year: number, month: number): Promise<strin
  * @param {string} messageHtml メール本文 (HTML)
  * @returns {Promise<any>}
  */
-async function sendEmail(auth: any, subject: string, messageHtml: string) {
+const sendEmail = async (auth: any, subject: string, messageHtml: string) => {
   const gmail = google.gmail({ version: 'v1', auth });
 
   // メールの作成
@@ -345,12 +344,12 @@ async function sendEmail(auth: any, subject: string, messageHtml: string) {
     console.error('メール送信中にエラーが発生しました:', error);
     throw error;
   }
-}
+};
 
 /**
  * メイン関数
  */
-async function main() {
+const main = async () => {
   try {
     // コマンドライン引数から年と月を取得
     const { year, month } = getYearMonthFromArgs();
@@ -380,7 +379,7 @@ async function main() {
     console.error('エラー:', error);
     process.exit(1);
   }
-}
+};
 
 // メイン関数を実行
 main();

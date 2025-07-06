@@ -8,7 +8,7 @@ import {
 import { DATABASE_PATH } from './constants.js';
 
 // メイン関数
-async function main(): Promise<void> {
+const main = async (): Promise<void> => {
   // データベース接続を作成
   const db = createDatabaseConnection(DATABASE_PATH);
 
@@ -60,7 +60,7 @@ async function main(): Promise<void> {
       console.error('データベース接続を閉じる際にエラーが発生しました:', err)
     );
   }
-}
+};
 
 // メイン関数を実行
 main();

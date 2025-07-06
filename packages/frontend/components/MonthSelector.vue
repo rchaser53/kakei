@@ -19,7 +19,7 @@ const availableMonths = ref<{ value: string; label: string }[]>([]);
 
 watch(() => props.modelValue, v => { selected.value = v; });
 
-async function fetchAvailableMonths() {
+const fetchAvailableMonths = async () => {
   try {
     const res = await fetch('/api/available-months');
     
@@ -36,11 +36,11 @@ async function fetchAvailableMonths() {
   } catch (error) {
     console.error('月データの取得に失敗しました:', error);
   }
-}
+};
 
-function emitChange() {
+const emitChange = () => {
   emit('update:modelValue', selected.value);
-}
+};
 
 onMounted(fetchAvailableMonths);
 </script>

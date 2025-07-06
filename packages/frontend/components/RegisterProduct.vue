@@ -31,7 +31,7 @@ const loading = ref(false);
 const successMessage = ref('');
 const errorMessage = ref('');
 
-async function registerProduct() {
+const registerProduct = async () => {
   loading.value = true;
   successMessage.value = '';
   errorMessage.value = '';

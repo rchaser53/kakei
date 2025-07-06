@@ -1,3 +1,6 @@
+import sqlite3 from 'sqlite3';
+import { DATABASE_PATH } from './constants.js';
+
 /**
  * receiptsテーブルのuse_imageカラムを更新する関数
  * @param imageHash レシートの画像ハッシュ
@@ -5,11 +8,11 @@
  * @param db sqlite3.Database インスタンス
  * @returns Promise<void>
  */
-export function updateUseImage(
+export const updateUseImage = (
   imageHash: string,
   useImage: boolean,
   db: sqlite3.Database = defaultDb
-): Promise<void> {
+): Promise<void> => {
   return new Promise((resolve, reject) => {
     db.run(
       'UPDATE receipts SET use_image = ? WHERE image_hash = ?',
@@ -23,18 +26,16 @@ export function updateUseImage(
       }
     );
   });
-}
-import sqlite3 from 'sqlite3';
-import { DATABASE_PATH } from './constants.js';
+};
 
 /**
  * データベース接続を作成する関数
  * @param dbPath データベースファイルのパス
  * @returns sqlite3.Database
  */
-export function createDatabaseConnection(dbPath: string): sqlite3.Database {
+export const createDatabaseConnection = (dbPath: string): sqlite3.Database => {
   return new sqlite3.Database(dbPath);
-}
+};
 
 // デフォルトのデータベース接続
 const defaultDb = createDatabaseConnection(DATABASE_PATH);
@@ -43,7 +44,7 @@ const defaultDb = createDatabaseConnection(DATABASE_PATH);
  * テーブルの作成
  * @param db sqlite3.Database インスタンス
  */
-export function initializeDatabase(db: sqlite3.Database = defaultDb): void {
+export const initializeDatabase = (db: sqlite3.Database = defaultDb): void => {
   db.serialize(() => {
     // receiptsテーブル - レシートの全情報を1つのテーブルに統合
     db.run(`
@@ -58,7 +59,7 @@ export function initializeDatabase(db: sqlite3.Database = defaultDb): void {
       )
     `);
   });
-}
+};
 
 /**
  * CSVデータを解析してSQLiteにINSERTする関数
@@ -106,7 +107,7 @@ export function parseAndSaveCSV(
 
           // データ行を処理
           const stmt = db.prepare(
-            'INSERT INTO receipts (image_hash, store_name, total_amount, receipt_date, use_image) VALUES (?, ?, ?, ?, ?)' 
+            'INSERT INTO receipts (image_hash, store_name, total_amount, receipt_date, use_image) VALUES (?, ?, ?, ?, ?)'
           );
 
           let hasError = false;
@@ -215,10 +216,10 @@ export function getReceiptTotal(
  * @param db sqlite3.Database インスタンス
  * @returns Promise<{receipt: any, items: any[]}>
  */
-export function getReceiptDetails(
+export const getReceiptDetails = (
   imageHash: string,
   db: sqlite3.Database = defaultDb
-): Promise<any> {
+): Promise<any> => {
   return new Promise((resolve, reject) => {
     // レシート情報を取得
     db.get('SELECT * FROM receipts WHERE image_hash = ?', [imageHash], (err, receipt) => {
@@ -233,7 +234,7 @@ export function getReceiptDetails(
       resolve(receipt);
     });
   });
-}
+};
 
 /**
  * 指定した月のレシート金額の合計を取得する関数
@@ -242,11 +243,11 @@ export function getReceiptDetails(
  * @param db sqlite3.Database インスタンス
  * @returns Promise<number> 指定した月の合計金額
  */
-export function getMonthlyTotal(
+export const getMonthlyTotal = (
   year: number,
   month: number,
   db: sqlite3.Database = defaultDb
-): Promise<number> {
+): Promise<number> => {
   return new Promise((resolve, reject) => {
     // 月の範囲チェック
     if (month < 1 || month > 12) {
@@ -275,7 +276,7 @@ export function getMonthlyTotal(
       }
     });
   });
-}
+};
 
 /**
  * 指定した月のレシート詳細情報を取得する関数
@@ -284,11 +285,11 @@ export function getMonthlyTotal(
  * @param db sqlite3.Database インスタンス
  * @returns Promise<{receipts: any[], total: number}> 指定した月のレシート情報と合計金額
  */
-export function getMonthlyReceiptDetails(
+export const getMonthlyReceiptDetails = (
   year: number,
   month: number,
   db: sqlite3.Database = defaultDb
-): Promise<{ receipts: any[]; total: number }> {
+): Promise<{ receipts: any[]; total: number }> => {
   return new Promise((resolve, reject) => {
     // 月の範囲チェック
     if (month < 1 || month > 12) {
@@ -328,14 +329,14 @@ export function getMonthlyReceiptDetails(
       }
     });
   });
-}
+};
 
 /**
  * データベース接続を閉じる関数
  * @param db sqlite3.Database インスタンス
  * @returns Promise<void>
  */
-export function closeDatabase(db: sqlite3.Database = defaultDb): Promise<void> {
+export const closeDatabase = (db: sqlite3.Database = defaultDb): Promise<void> => {
   return new Promise((resolve, reject) => {
     db.close(err => {
       if (err) {
@@ -345,7 +346,7 @@ export function closeDatabase(db: sqlite3.Database = defaultDb): Promise<void> {
       }
     });
   });
-}
+};
 
 // デフォルトのデータベース接続を初期化
 initializeDatabase(defaultDb);
@@ -359,17 +360,17 @@ initializeDatabase(defaultDb);
  * @param db sqlite3.Database インスタンス
  * @returns Promise<boolean> 登録が成功したかどうか
  */
-export function insertManualReceipt(
+export const insertManualReceipt = (
   store_name: string,
   total_amount: number,
   receipt_date: string,
   use_image: boolean,
   db: sqlite3.Database = defaultDb
-): Promise<boolean> {
+): Promise<boolean> => {
   return new Promise((resolve, reject) => {
     // image_hashは手動登録なのでユニークな値を生成（例: store+date+amount+timestamp）
     const image_hash = `manual_${store_name}_${receipt_date}_${total_amount}_${Date.now()}`;
-    
+
     db.run(
       'INSERT INTO receipts (image_hash, store_name, total_amount, receipt_date, use_image) VALUES (?, ?, ?, ?, ?)',
       [image_hash, store_name, total_amount, receipt_date, !!use_image],
@@ -382,16 +383,16 @@ export function insertManualReceipt(
       }
     );
   });
-}
+};
 
 /**
  * 利用可能な年月のリストを取得する関数
  * @param db sqlite3.Database インスタンス
  * @returns Promise<{year: number, month: number}[]> 利用可能な年月のリスト
  */
-export function getAvailableMonths(
+export const getAvailableMonths = (
   db: sqlite3.Database = defaultDb
-): Promise<{year: number, month: number}[]> {
+): Promise<{ year: number; month: number }[]> => {
   return new Promise((resolve, reject) => {
     const query = `
       SELECT 
@@ -408,13 +409,13 @@ export function getAvailableMonths(
       } else {
         const availableMonths = rows.map(row => ({
           year: parseInt(row.year, 10),
-          month: parseInt(row.month, 10)
+          month: parseInt(row.month, 10),
         }));
         resolve(availableMonths);
       }
     });
   });
-}
+};
 
 /**
  * 指定したIDのレシートを削除する関数
@@ -422,10 +423,7 @@ export function getAvailableMonths(
  * @param db sqlite3.Database インスタンス
  * @returns Promise<boolean> 削除が成功したかどうか
  */
-export function deleteReceipt(
-  id: number,
-  db: sqlite3.Database = defaultDb
-): Promise<boolean> {
+export const deleteReceipt = (id: number, db: sqlite3.Database = defaultDb): Promise<boolean> => {
   return new Promise((resolve, reject) => {
     db.run('DELETE FROM receipts WHERE id = ?', [id], function (err) {
       if (err) {
@@ -436,7 +434,7 @@ export function deleteReceipt(
       }
     });
   });
-}
+};
 
 /**
  * 複数のレシートを一括削除する関数
@@ -444,10 +442,10 @@ export function deleteReceipt(
  * @param db sqlite3.Database インスタンス
  * @returns Promise<number> 削除されたレコード数
  */
-export function deleteMultipleReceipts(
+export const deleteMultipleReceipts = (
   ids: number[],
   db: sqlite3.Database = defaultDb
-): Promise<number> {
+): Promise<number> => {
   return new Promise((resolve, reject) => {
     if (ids.length === 0) {
       return resolve(0);
@@ -479,4 +477,4 @@ export function deleteMultipleReceipts(
       });
     });
   });
-}
+};

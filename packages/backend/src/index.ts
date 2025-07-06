@@ -25,7 +25,7 @@ const openai = new OpenAI({
 });
 
 // コマンドライン引数からパスを取得
-function getPathFromArgs(): string {
+const getPathFromArgs = (): string => {
   const args = process.argv.slice(2);
 
   // 引数がない場合はヘルプを表示して終了
@@ -45,10 +45,10 @@ function getPathFromArgs(): string {
   }
 
   return inputPath;
-}
+};
 
 // ディレクトリ内のすべての対応画像ファイルを再帰的に取得
-function getAllImageFiles(dirPath: string): string[] {
+const getAllImageFiles = (dirPath: string): string[] => {
   let imageFiles: string[] = [];
 
   // ディレクトリ内のファイルとディレクトリを取得
@@ -71,10 +71,10 @@ function getAllImageFiles(dirPath: string): string[] {
   }
 
   return imageFiles;
-}
+};
 
 // 画像からハッシュを生成する関数
-function generateImageHash(imagePath: string): string {
+const generateImageHash = (imagePath: string): string => {
   // 画像ファイルを読み込む
   const imageBuffer = fs.readFileSync(imagePath);
 
@@ -82,10 +82,10 @@ function generateImageHash(imagePath: string): string {
   const hash = crypto.createHash('sha256');
   hash.update(imageBuffer);
   return hash.digest('hex');
-}
+};
 
 // データベースに画像ハッシュが存在するか確認する関数
-async function isImageHashExists(imageHash: string, db: sqlite3.Database): Promise<boolean> {
+const isImageHashExists = async (imageHash: string, db: sqlite3.Database): Promise<boolean> => {
   return new Promise((resolve, reject) => {
     db.get('SELECT 1 FROM receipts WHERE image_hash = ?', [imageHash], (err, row) => {
       if (err) {
@@ -95,10 +95,10 @@ async function isImageHashExists(imageHash: string, db: sqlite3.Database): Promi
       resolve(!!row); // rowが存在すればtrue、存在しなければfalse
     });
   });
-}
+};
 
 // 画像を処理してデータベースに保存
-async function processImage(imagePath: string, db: sqlite3.Database): Promise<void> {
+const processImage = async (imagePath: string, db: sqlite3.Database): Promise<void> => {
   console.log(`処理する画像: ${imagePath}`);
 
   try {
@@ -183,10 +183,10 @@ async function processImage(imagePath: string, db: sqlite3.Database): Promise<vo
   } catch (error) {
     console.error(`${imagePath} の処理中にエラーが発生しました:`, error);
   }
-}
+};
 
 // メイン関数
-async function main(): Promise<void> {
+const main = async (): Promise<void> => {
   // データベース接続を作成
   const db = createDatabaseConnection(DATABASE_PATH);
 
@@ -235,7 +235,7 @@ async function main(): Promise<void> {
       console.error('データベース接続を閉じる際にエラーが発生しました:', err);
     }
   }
-}
+};
 
 // メイン関数を実行し、Promiseが解決されるまで待機
 (async () => {

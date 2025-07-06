@@ -11,7 +11,7 @@ import {
   insertManualReceipt,
   getAvailableMonths,
   deleteReceipt,
-  deleteMultipleReceipts
+  deleteMultipleReceipts,
 } from './db.js';
 import { DATABASE_PATH } from './constants.js';
 import {
@@ -20,7 +20,7 @@ import {
   authenticateUser,
   createSession,
   deleteSession,
-  cleanupExpiredSessions
+  cleanupExpiredSessions,
 } from './auth.js';
 import { requireAuth, checkAuth } from './middleware.js';
 
@@ -36,7 +36,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 // データベースの初期化
-async function initializeDatabase() {
+const initializeDatabase = async () => {
   const db = createDatabaseConnection(DATABASE_PATH);
   try {
     await createUserTable(db);
@@ -48,37 +48,37 @@ async function initializeDatabase() {
   } finally {
     await closeDatabase(db);
   }
-}
+};
 
 // 認証関連のAPI
 
 // ログインAPI
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
-  
+
   if (!username || !password) {
     return res.status(400).json({ error: 'ユーザー名とパスワードが必要です' });
   }
-  
+
   const db = createDatabaseConnection(DATABASE_PATH);
-  
+
   try {
     const userId = await authenticateUser(db, username, password);
-    
+
     if (!userId) {
       return res.status(401).json({ error: 'ユーザー名またはパスワードが間違っています' });
     }
-    
+
     const sessionId = await createSession(db, userId);
-    
+
     // セッションIDをCookieに設定（24時間有効）
     res.cookie('session-id', sessionId, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       maxAge: 24 * 60 * 60 * 1000, // 24時間
-      sameSite: 'strict'
+      sameSite: 'strict',
     });
-    
+
     res.json({ success: true, message: 'ログインしました' });
   } catch (error) {
     console.error('ログインエラー:', error);
@@ -91,10 +91,10 @@ app.post('/api/auth/login', async (req, res) => {
 // ログアウトAPI
 app.post('/api/auth/logout', async (req, res) => {
   const sessionId = req.cookies['session-id'];
-  
+
   if (sessionId) {
     const db = createDatabaseConnection(DATABASE_PATH);
-    
+
     try {
       await deleteSession(db, sessionId);
     } catch (error) {
@@ -103,16 +103,16 @@ app.post('/api/auth/logout', async (req, res) => {
       await closeDatabase(db);
     }
   }
-  
+
   res.clearCookie('session-id');
   res.json({ success: true, message: 'ログアウトしました' });
 });
 
 // 認証状態確認API
 app.get('/api/auth/status', checkAuth, (req, res) => {
-  res.json({ 
+  res.json({
     authenticated: !!req.userId,
-    userId: req.userId
+    userId: req.userId,
   });
 });
 
@@ -140,7 +140,6 @@ app.put('/api/receipts/:imageHash/use-image', async (req, res) => {
   }
 });
 
-
 // 静的ファイルを提供
 app.use(express.static(path.join(__dirname, '../../../dist/frontend')));
 
@@ -150,7 +149,9 @@ app.get('/api/receipts/:year/:month', async (req, res) => {
   const month = parseInt(req.params.month, 10);
 
   if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
-    return res.status(400).json({ error: '無効な年または月です。月は1から12の間で指定してください。' });
+    return res
+      .status(400)
+      .json({ error: '無効な年または月です。月は1から12の間で指定してください。' });
   }
 
   const db = createDatabaseConnection(DATABASE_PATH);
@@ -222,7 +223,7 @@ app.delete('/api/receipts/:id', async (req, res) => {
   if (isNaN(id)) {
     return res.status(400).json({ error: '無効なIDです' });
   }
-  
+
   const db = createDatabaseConnection(DATABASE_PATH);
   try {
     const deleted = await deleteReceipt(id, db);
@@ -245,20 +246,20 @@ app.delete('/api/receipts', async (req, res) => {
   if (!Array.isArray(ids) || ids.length === 0) {
     return res.status(400).json({ error: 'IDの配列が必要です' });
   }
-  
+
   // 全てのIDが数値かチェック
   const validIds = ids.filter(id => Number.isInteger(id) && id > 0);
   if (validIds.length === 0) {
     return res.status(400).json({ error: '有効なIDが含まれていません' });
   }
-  
+
   const db = createDatabaseConnection(DATABASE_PATH);
   try {
     const deletedCount = await deleteMultipleReceipts(validIds, db);
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: `${deletedCount}件のレシートを削除しました`,
-      deletedCount 
+      deletedCount,
     });
   } catch (error) {
     console.error('一括削除エラー:', error);
@@ -269,18 +270,18 @@ app.delete('/api/receipts', async (req, res) => {
 });
 
 // サーバーを起動
-async function startServer() {
+const startServer = async () => {
   console.log('Starting server initialization...');
   await initializeDatabase();
   console.log('Database initialized, starting Express server...');
-  
+
   app.listen(port, () => {
     console.log(`サーバーが http://localhost:${port} で起動しました`);
   });
-}
+};
 
 console.log('About to start server...');
-startServer().catch((error) => {
+startServer().catch(error => {
   console.error('Server startup error:', error);
   process.exit(1);
 });
