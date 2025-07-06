@@ -32,6 +32,10 @@
   "license": "ISC",
   "description": "Kakei monorepo with backend and frontend packages",
   "devDependencies": {
+    "@types/app-root-dir": "^0.1.4",
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "app-root-dir": "^1.0.2"
   }
 }
