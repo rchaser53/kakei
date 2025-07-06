@@ -170,7 +170,7 @@ export function getAllReceipts(db: sqlite3.Database = defaultDb): Promise<any[]>
     const query = `
       SELECT id, image_hash, store_name, total_amount, receipt_date, created_at, use_image
       FROM receipts
-      ORDER BY id ASC
+      ORDER BY COALESCE(receipt_date, created_at) ASC, id ASC
     `;
 
     db.all(query, (err, rows) => {
@@ -308,7 +308,7 @@ export const getMonthlyReceiptDetails = (
       SELECT id, image_hash, store_name, total_amount, receipt_date, created_at, use_image
       FROM receipts
       WHERE receipt_date >= ? AND receipt_date < ?
-      ORDER BY receipt_date ASC, id ASC
+      ORDER BY COALESCE(receipt_date, created_at) ASC, id ASC
     `;
 
     db.all(query, [startDate, endDate], async (err, rows: any[]) => {

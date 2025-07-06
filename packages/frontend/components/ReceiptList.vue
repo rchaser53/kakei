@@ -44,7 +44,7 @@
           
           <div class="receipt-content">
             <div class="receipt-header">
-              <div class="receipt-date">{{ formatDate(receipt.created_at) }}</div>
+              <div class="receipt-date">{{ formatDate(receipt.receipt_date || receipt.created_at) }}</div>
               <div class="receipt-id">レシートID: {{ receipt.id }}</div>
             </div>
             <div class="receipt-details">
@@ -93,6 +93,9 @@ const allSelected = computed(() => {
 });
 
 const formatDate = (dateString: string) => {
+  if (!dateString) {
+    return '日付なし';
+  }
   const date = new Date(dateString);
   return `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
 };
