@@ -3,3 +3,4 @@ node_modules
 dist
 *.jpg
 *.sqlite
+.DS_Store
