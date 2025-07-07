@@ -4,3 +4,6 @@ dist
 *.jpg
 *.sqlite
 .DS_Store
+credentials.json
+token.json
+digest.txt
