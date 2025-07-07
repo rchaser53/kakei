@@ -78,11 +78,8 @@ const receipts = ref<any[]>([]);
 const loading = ref<boolean>(false);
 const noDataMessage = ref<string>('');
 
-// 当月を初期値として設定
-const now = new Date();
-const currentYear = now.getFullYear();
-const currentMonth = now.getMonth() + 1;
-const selectedMonth = ref<string>(`${currentYear}-${currentMonth}`);
+// 月選択の初期値は空文字に設定（MonthSelectorが最新月を設定する）
+const selectedMonth = ref<string>('');
 
 const deleteMode = ref<boolean>(false);
 const selectedReceiptIds = ref<number[]>([]);

@@ -33,6 +33,13 @@ const fetchAvailableMonths = async () => {
       value: `${item.year}-${item.month}`,
       label: `${item.year}年${item.month}月`
     }));
+
+    // propsでmodelValueが設定されていない場合、最新の月をデフォルトとして設定
+    if (!props.modelValue && availableMonths.value.length > 0) {
+      const latestMonth = availableMonths.value[0].value;
+      selected.value = latestMonth;
+      emit('update:modelValue', latestMonth);
+    }
   } catch (error) {
     console.error('月データの取得に失敗しました:', error);
   }
