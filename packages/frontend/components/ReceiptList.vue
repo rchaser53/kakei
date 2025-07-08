@@ -3,6 +3,22 @@
     <h2>レシート一覧</h2>
     <MonthSelector v-model="selectedMonth" />
     
+    <!-- 店舗名絞り込み -->
+    <div class="filter-section">
+      <label for="store-filter">店舗名で絞り込み:</label>
+      <input 
+        id="store-filter"
+        v-model="storeNameFilter" 
+        type="text" 
+        placeholder="店舗名を入力してください"
+        class="store-filter-input"
+        @input="onStoreFilterChange"
+      />
+      <button @click="clearFilter" class="clear-filter-btn" type="button">
+        クリア
+      </button>
+    </div>
+    
     <!-- 削除モード切替と一括削除ボタン -->
     <div class="action-bar" v-if="receipts.length > 0">
       <!-- デバッグ情報 -->
@@ -75,11 +91,15 @@ import { ref, watch, onMounted, computed, nextTick } from 'vue';
 import MonthSelector from './MonthSelector.vue';
 
 const receipts = ref<any[]>([]);
+const allReceipts = ref<any[]>([]); // 全レシートを保持
 const loading = ref<boolean>(false);
 const noDataMessage = ref<string>('');
 
 // 月選択の初期値は空文字に設定（MonthSelectorが最新月を設定する）
 const selectedMonth = ref<string>('');
+
+// 店舗名フィルター
+const storeNameFilter = ref<string>('');
 
 const deleteMode = ref<boolean>(false);
 const selectedReceiptIds = ref<number[]>([]);
@@ -89,12 +109,52 @@ const allSelected = computed(() => {
   return receipts.value.length > 0 && selectedReceiptIds.value.length === receipts.value.length;
 });
 
+// フィルタリングされたレシート（computed）
+const filteredReceipts = computed(() => {
+  if (!storeNameFilter.value || storeNameFilter.value.trim() === '') {
+    return allReceipts.value;
+  }
+  
+  const filterText = storeNameFilter.value.trim().toLowerCase();
+  return allReceipts.value.filter(receipt => 
+    receipt.store_name.toLowerCase().includes(filterText)
+  );
+});
+
+// receiptsをfilteredReceiptsと同期
+watch(filteredReceipts, (newFilteredReceipts) => {
+  receipts.value = newFilteredReceipts;
+  
+  // フィルター結果に応じてメッセージを更新
+  if (newFilteredReceipts.length === 0) {
+    if (storeNameFilter.value && storeNameFilter.value.trim() !== '') {
+      noDataMessage.value = `「${storeNameFilter.value}」に一致するレシートはありません`;
+    } else if (allReceipts.value.length === 0) {
+      noDataMessage.value = 'この月のレシート情報はありません';
+    } else {
+      noDataMessage.value = '';
+    }
+  } else {
+    noDataMessage.value = '';
+  }
+});
+
 const formatDate = (dateString: string) => {
   if (!dateString) {
     return '日付なし';
   }
   const date = new Date(dateString);
   return `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
+};
+
+// 店舗名フィルターのクリア
+const clearFilter = () => {
+  storeNameFilter.value = '';
+};
+
+// 店舗名フィルターの変更時（即座に反映）
+const onStoreFilterChange = () => {
+  // computedが自動的に更新されるため、特別な処理は不要
 };
 
 // 削除モードの切り替え
@@ -212,6 +272,7 @@ const handleAuthError = (response: Response) => {
 
 const fetchReceipts = async () => {
   if (!selectedMonth.value) {
+    allReceipts.value = [];
     receipts.value = [];
     noDataMessage.value = '月を選択してください';
     return;
@@ -224,9 +285,11 @@ const fetchReceipts = async () => {
     if (handleAuthError(res)) return;
     
     const data = await res.json();
-    receipts.value = data.receipts;
-    noDataMessage.value = data.receipts.length === 0 ? 'この月のレシート情報はありません' : '';
+    allReceipts.value = data.receipts;
+    // filteredReceiptsのwatcherによってreceiptsが自動更新される
+    
   } catch (e) {
+    allReceipts.value = [];
     receipts.value = [];
     noDataMessage.value = 'データの取得中にエラーが発生しました';
   } finally {
@@ -257,6 +320,54 @@ watch(selectedMonth, fetchReceipts);
 
 <style scoped>
 .receipts-section { margin-top: 2rem; }
+
+/* 店舗名フィルターセクション */
+.filter-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+}
+
+.filter-section label {
+  font-weight: bold;
+  color: #495057;
+  white-space: nowrap;
+}
+
+.store-filter-input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.store-filter-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+.clear-filter-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #6c757d;
+  background: #fff;
+  color: #6c757d;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.clear-filter-btn:hover {
+  background: #6c757d;
+  color: #fff;
+}
 
 /* アクションバー */
 .action-bar {
