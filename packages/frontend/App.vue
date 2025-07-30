@@ -10,6 +10,7 @@
         <nav style="margin: 1rem 0;">
           <button @click="currentView = 'register'" :class="{ active: currentView === 'register' }">商品登録</button>
           <button @click="currentView = 'list'" :class="{ active: currentView === 'list' }">レシート一覧</button>
+          <button @click="currentView = 'backup'" :class="{ active: currentView === 'backup' }">バックアップ</button>
         </nav>
         <div class="auth-controls">
           <span class="welcome-text">ようこそ！</span>
@@ -19,7 +20,8 @@
     </header>
     <main>
       <RegisterProduct v-if="currentView === 'register'" />
-      <ReceiptList v-else />
+      <ReceiptList v-else-if="currentView === 'list'" />
+      <GoogleDriveUpload v-else-if="currentView === 'backup'" />
     </main>
     <footer>
       <p>&copy; 2025 家計簿アプリ</p>
@@ -32,8 +34,9 @@ import { ref, onMounted } from 'vue';
 import Login from './components/Login.vue';
 import RegisterProduct from './components/RegisterProduct.vue';
 import ReceiptList from './components/ReceiptList.vue';
+import GoogleDriveUpload from './components/GoogleDriveUpload.vue';
 
-const currentView = ref<'register' | 'list'>('list');
+const currentView = ref<'register' | 'list' | 'backup'>('list');
 const isAuthenticated = ref(false);
 const isLoading = ref(true);
 

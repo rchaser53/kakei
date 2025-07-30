@@ -24,6 +24,7 @@ import {
   cleanupExpiredSessions,
 } from './auth.js';
 import { requireAuth, checkAuth } from './middleware.js';
+import { uploadToGoogleDrive } from './upload-service.js';
 
 // ES Moduleでの__dirnameの代替
 const __filename = fileURLToPath(import.meta.url);
@@ -267,6 +268,27 @@ app.delete('/api/receipts', async (req, res) => {
     res.status(500).json({ error: '一括削除に失敗しました' });
   } finally {
     await closeDatabase(db).catch(() => {});
+  }
+});
+
+// Google Drive アップロードAPI
+app.post('/api/upload/drive', requireAuth, async (req, res) => {
+  const { fileName } = req.body;
+  
+  try {
+    const result = await uploadToGoogleDrive(DATABASE_PATH, fileName);
+    res.json({
+      success: true,
+      message: 'データベースをGoogle Driveにアップロードしました',
+      fileId: result.id,
+      webViewLink: result.webViewLink
+    });
+  } catch (error) {
+    console.error('Google Drive アップロードエラー:', error);
+    res.status(500).json({ 
+      error: 'Google Driveへのアップロードに失敗しました',
+      details: error instanceof Error ? error.message : String(error)
+    });
   }
 });
 
