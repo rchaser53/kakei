@@ -8,7 +8,10 @@ import { authenticate } from '@google-cloud/local-auth';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
+const SCOPES = [
+  'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/drive.readonly'
+];
 const TOKEN_PATH = path.join(__dirname, '../token.json');
 const CREDENTIALS_PATH = path.join(__dirname, '../credentials.json');
 

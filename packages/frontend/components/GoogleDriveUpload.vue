@@ -1,49 +1,57 @@
 <template>
-  <div class="upload-section">
-    <h2>データベースバックアップ</h2>
-    <p>データベースをGoogle Driveにバックアップできます。</p>
+  <div class="backup-page">
+    <h2>データベースバックアップ・復元</h2>
     
-    <div class="upload-form">
-      <div class="input-group">
-        <label for="fileName">ファイル名:</label>
-        <input 
-          id="fileName"
-          v-model="fileName" 
-          type="text" 
-          placeholder="backup-database.sqlite"
-          :disabled="isUploading"
-        />
-      </div>
+    <!-- アップロード機能 -->
+    <div class="upload-section">
+      <h3>📤 データベースアップロード</h3>
+      <p>データベースをGoogle Driveにバックアップできます。</p>
       
-      <button 
-        @click="uploadToGoogleDrive" 
-        :disabled="isUploading || !fileName.trim()"
-        class="upload-btn"
-      >
-        <span v-if="isUploading">アップロード中...</span>
-        <span v-else>Google Driveにアップロード</span>
-      </button>
+      <div class="upload-form">
+        <div class="input-group">
+          <label for="fileName">ファイル名:</label>
+          <input 
+            id="fileName"
+            v-model="fileName" 
+            type="text" 
+            placeholder="backup-database.sqlite"
+            :disabled="isUploading"
+          />
+        </div>
+        
+        <button 
+          @click="uploadToGoogleDrive" 
+          :disabled="isUploading || !fileName.trim()"
+          class="action-btn upload-btn"
+        >
+          <span v-if="isUploading">アップロード中...</span>
+          <span v-else>Google Driveにアップロード</span>
+        </button>
+      </div>
+
+      <div v-if="uploadResult" class="result">
+        <div v-if="uploadResult.success" class="success-message">
+          <h4>✅ アップロード成功</h4>
+          <p>{{ uploadResult.message }}</p>
+          <p>
+            <a :href="uploadResult.webViewLink" target="_blank" class="drive-link">
+              Google Driveで開く
+            </a>
+          </p>
+        </div>
+        
+        <div v-else class="error-message">
+          <h4>❌ アップロード失敗</h4>
+          <p>{{ uploadResult.error }}</p>
+          <p v-if="uploadResult.details" class="error-details">
+            詳細: {{ uploadResult.details }}
+          </p>
+        </div>
+      </div>
     </div>
 
-    <div v-if="uploadResult" class="upload-result">
-      <div v-if="uploadResult.success" class="success-message">
-        <h3>✅ アップロード成功</h3>
-        <p>{{ uploadResult.message }}</p>
-        <p>
-          <a :href="uploadResult.webViewLink" target="_blank" class="drive-link">
-            Google Driveで開く
-          </a>
-        </p>
-      </div>
-      
-      <div v-else class="error-message">
-        <h3>❌ アップロード失敗</h3>
-        <p>{{ uploadResult.error }}</p>
-        <p v-if="uploadResult.details" class="error-details">
-          詳細: {{ uploadResult.details }}
-        </p>
-      </div>
-    </div>
+    <!-- ダウンロード機能 -->
+    <GoogleDriveDownload />
 
     <div v-if="isUploading" class="loading-spinner">
       <div class="spinner"></div>
@@ -53,6 +61,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import GoogleDriveDownload from './GoogleDriveDownload.vue';
 
 interface UploadResult {
   success: boolean;
@@ -128,17 +137,29 @@ const uploadToGoogleDrive = async () => {
 </script>
 
 <style scoped>
-.upload-section {
-  max-width: 600px;
+.backup-page {
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 2rem;
-  background: #f9f9f9;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px;
 }
 
-.upload-section h2 {
+.backup-page h2 {
+  text-align: center;
   color: #333;
+  margin-bottom: 2rem;
+}
+
+.upload-section {
+  background: #f9f9f9;
+  padding: 20px;
+  margin-bottom: 30px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.upload-section h3 {
+  color: #333;
+  margin-top: 0;
   margin-bottom: 0.5rem;
 }
 
@@ -176,16 +197,19 @@ const uploadToGoogleDrive = async () => {
   cursor: not-allowed;
 }
 
-.upload-btn {
-  padding: 1rem 2rem;
-  background: #4285f4;
-  color: white;
+.action-btn {
+  padding: 12px 24px;
   border: none;
   border-radius: 4px;
   font-size: 1rem;
   font-weight: bold;
   cursor: pointer;
   transition: background-color 0.3s ease;
+}
+
+.upload-btn {
+  background: #4285f4;
+  color: white;
 }
 
 .upload-btn:hover:not(:disabled) {
@@ -197,7 +221,7 @@ const uploadToGoogleDrive = async () => {
   cursor: not-allowed;
 }
 
-.upload-result {
+.result {
   margin-top: 1.5rem;
   padding: 1rem;
   border-radius: 4px;
@@ -215,8 +239,8 @@ const uploadToGoogleDrive = async () => {
   border: 1px solid #f5c6cb;
 }
 
-.success-message h3,
-.error-message h3 {
+.success-message h4,
+.error-message h4 {
   margin: 0 0 0.5rem 0;
 }
 
@@ -257,8 +281,12 @@ const uploadToGoogleDrive = async () => {
 }
 
 @media (max-width: 768px) {
+  .backup-page {
+    padding: 10px;
+  }
+  
   .upload-section {
-    padding: 1rem;
+    padding: 15px;
   }
   
   .upload-form {

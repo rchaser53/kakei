@@ -10,7 +10,7 @@
         <nav style="margin: 1rem 0;">
           <button @click="currentView = 'register'" :class="{ active: currentView === 'register' }">商品登録</button>
           <button @click="currentView = 'list'" :class="{ active: currentView === 'list' }">レシート一覧</button>
-          <button @click="currentView = 'backup'" :class="{ active: currentView === 'backup' }">バックアップ</button>
+          <button @click="currentView = 'backup'" :class="{ active: currentView === 'backup' }">バックアップ・復元</button>
         </nav>
         <div class="auth-controls">
           <span class="welcome-text">ようこそ！</span>

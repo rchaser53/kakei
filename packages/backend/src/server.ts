@@ -292,6 +292,133 @@ app.post('/api/upload/drive', requireAuth, async (req, res) => {
   }
 });
 
+// Google Drive ダウンロードAPI - ファイル一覧取得
+app.get('/api/drive/files', requireAuth, async (req, res) => {
+  try {
+    const { listGoogleDriveFiles } = await import('./download-service.js');
+    const files = await listGoogleDriveFiles();
+    res.json({ success: true, files });
+  } catch (error) {
+    console.error('Google Drive ファイル一覧取得エラー:', error);
+    res.status(500).json({
+      error: 'Google Driveのファイル一覧取得に失敗しました',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+// Google Drive ダウンロードAPI - 日付指定
+app.post('/api/drive/download/date', requireAuth, async (req, res) => {
+  const { date } = req.body;
+  
+  if (!date) {
+    return res.status(400).json({ error: '日付を指定してください' });
+  }
+
+  // 日付形式の検証 (YYYY-MM-DD)
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(date)) {
+    return res.status(400).json({ error: '日付はYYYY-MM-DD形式で指定してください' });
+  }
+
+  try {
+    const { downloadImagesByDate } = await import('./download-service.js');
+    const result = await downloadImagesByDate(date);
+    res.json(result);
+  } catch (error) {
+    console.error('Google Drive ダウンロードエラー:', error);
+    res.status(500).json({
+      error: 'Google Driveからのダウンロードに失敗しました',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+// Google Drive ダウンロードAPI - 月指定
+app.post('/api/drive/download/month', requireAuth, async (req, res) => {
+  const { year, month } = req.body;
+  
+  if (!year || !month) {
+    return res.status(400).json({ error: '年と月を指定してください' });
+  }
+
+  if (typeof year !== 'number' || typeof month !== 'number' || month < 1 || month > 12) {
+    return res.status(400).json({ error: '年は数値、月は1-12の数値で指定してください' });
+  }
+
+  try {
+    const { downloadImagesByMonth } = await import('./download-service.js');
+    const result = await downloadImagesByMonth(year, month);
+    res.json(result);
+  } catch (error) {
+    console.error('Google Drive ダウンロードエラー:', error);
+    res.status(500).json({
+      error: 'Google Driveからのダウンロードに失敗しました',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+// Google Drive ファイル検索API - 日付指定
+app.get('/api/drive/files/date/:date', requireAuth, async (req, res) => {
+  const { date } = req.params;
+  
+  // 日付形式の検証 (YYYY-MM-DD)
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(date)) {
+    return res.status(400).json({ error: '日付はYYYY-MM-DD形式で指定してください' });
+  }
+
+  try {
+    const { getImagesByDate } = await import('./download-service.js');
+    const files = await getImagesByDate(date);
+    res.json({ success: true, files, count: files.length });
+  } catch (error) {
+    console.error('Google Drive ファイル検索エラー:', error);
+    res.status(500).json({
+      error: 'Google Driveのファイル検索に失敗しました',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+// デバッグ用: Google Drive の全ファイル一覧を取得
+app.get('/api/drive/files/all', requireAuth, async (req, res) => {
+  try {
+    const { listGoogleDriveFiles } = await import('./download-service.js');
+    const files = await listGoogleDriveFiles();
+    res.json({ success: true, files, count: files.length });
+  } catch (error) {
+    console.error('Google Drive ファイル一覧取得エラー:', error);
+    res.status(500).json({
+      error: 'Google Driveのファイル一覧取得に失敗しました',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+// Google Drive ファイル検索API - 月指定
+app.get('/api/drive/files/month/:year/:month', requireAuth, async (req, res) => {
+  const year = parseInt(req.params.year);
+  const month = parseInt(req.params.month);
+  
+  if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
+    return res.status(400).json({ error: '年は数値、月は1-12の数値で指定してください' });
+  }
+
+  try {
+    const { getImagesByMonth } = await import('./download-service.js');
+    const files = await getImagesByMonth(year, month);
+    res.json({ success: true, files, count: files.length });
+  } catch (error) {
+    console.error('Google Drive ファイル検索エラー:', error);
+    res.status(500).json({
+      error: 'Google Driveのファイル検索に失敗しました',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
 // サーバーを起動
 const startServer = async () => {
   console.log('Starting server initialization...');
