@@ -276,17 +276,49 @@ app.post('/api/upload/drive', requireAuth, async (req, res) => {
   const { fileName } = req.body;
   
   try {
-    const result = await uploadToGoogleDrive(DATABASE_PATH, fileName);
+    // upload-serviceから新しい関数をインポート
+    const { uploadDatabaseBackup } = await import('./upload-service.js');
+    
+    // backupディレクトリにアップロード（タイムスタンプ付きファイル名で）
+    const result = await uploadDatabaseBackup(DATABASE_PATH, fileName);
+    
     res.json({
       success: true,
-      message: 'データベースをGoogle Driveにアップロードしました',
+      message: 'データベースをGoogle Driveのbackupディレクトリにアップロードしました',
       fileId: result.id,
-      webViewLink: result.webViewLink
+      webViewLink: result.webViewLink,
+      folderId: result.folderId,
+      folderPath: 'backup',
+      fileName: result.fileName,
+      uploadedAt: result.uploadedAt
     });
   } catch (error) {
     console.error('Google Drive アップロードエラー:', error);
     res.status(500).json({ 
       error: 'Google Driveへのアップロードに失敗しました',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+// Google Drive バックアップクリーンアップAPI（オプション）
+app.post('/api/upload/drive/cleanup', requireAuth, async (req, res) => {
+  const { keepCount = 10 } = req.body;
+  
+  try {
+    const { cleanupOldBackups } = await import('./upload-service.js');
+    const result = await cleanupOldBackups(keepCount);
+    
+    res.json({
+      success: true,
+      message: `古いバックアップファイル ${result.deletedCount} 個を削除しました`,
+      deletedCount: result.deletedCount,
+      remainingCount: result.remainingCount
+    });
+  } catch (error) {
+    console.error('バックアップクリーンアップエラー:', error);
+    res.status(500).json({ 
+      error: 'バックアップクリーンアップに失敗しました',
       details: error instanceof Error ? error.message : String(error)
     });
   }
