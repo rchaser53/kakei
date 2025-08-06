@@ -2,7 +2,6 @@ import {
   getAllReceipts,
   closeDatabase,
   createDatabaseConnection,
-  getReceiptDetails,
   getReceiptTotal,
 } from './db.js';
 import { DATABASE_PATH } from './constants.js';

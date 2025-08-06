@@ -1,6 +1,5 @@
 import sqlite3 from 'sqlite3';
 import fs from 'fs';
-import { DATABASE_PATH } from './constants.js';
 
 /**
  * receiptsテーブルのuse_imageカラムを更新する関数
