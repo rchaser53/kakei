@@ -63,7 +63,6 @@ export const authenticateUser = (
     const query = `SELECT id, password_hash FROM users WHERE username = ?`;
 
     db.get(query, [username], async (err, row: any) => {
-      console.log({ err, row });
       if (err) {
         reject(err);
         return;
@@ -73,7 +72,6 @@ export const authenticateUser = (
         resolve(null);
         return;
       }
-      console.log({ password, row });
 
       try {
         const isValid = await bcrypt.compare(password, row.password_hash);
