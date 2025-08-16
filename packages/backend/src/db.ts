@@ -479,3 +479,64 @@ export const deleteMultipleReceipts = (ids: number[], db: sqlite3.Database): Pro
     });
   });
 };
+
+/**
+ * レシート情報を更新する関数
+ * @param id レシートID
+ * @param updateData 更新するデータ
+ * @param db sqlite3.Database インスタンス
+ * @returns Promise<boolean> 更新が成功したかどうか
+ */
+export const updateReceipt = (
+  id: number,
+  updateData: {
+    store_name?: string;
+    total_amount?: number;
+    receipt_date?: string;
+    use_image?: boolean;
+  },
+  db: sqlite3.Database
+): Promise<boolean> => {
+  return new Promise((resolve, reject) => {
+    // 更新フィールドとパラメータを動的に構築
+    const updateFields: string[] = [];
+    const values: any[] = [];
+
+    if (updateData.store_name !== undefined) {
+      updateFields.push('store_name = ?');
+      values.push(updateData.store_name);
+    }
+
+    if (updateData.total_amount !== undefined) {
+      updateFields.push('total_amount = ?');
+      values.push(updateData.total_amount);
+    }
+
+    if (updateData.receipt_date !== undefined) {
+      updateFields.push('receipt_date = ?');
+      values.push(updateData.receipt_date);
+    }
+
+    if (updateData.use_image !== undefined) {
+      updateFields.push('use_image = ?');
+      values.push(updateData.use_image ? 1 : 0);
+    }
+
+    if (updateFields.length === 0) {
+      return resolve(false); // 更新するフィールドがない
+    }
+
+    // IDをパラメータに追加
+    values.push(id);
+
+    const query = `UPDATE receipts SET ${updateFields.join(', ')} WHERE id = ?`;
+
+    db.run(query, values, function (err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(this.changes > 0);
+      }
+    });
+  });
+};

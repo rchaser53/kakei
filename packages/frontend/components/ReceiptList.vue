@@ -47,7 +47,7 @@
       <div v-if="loading" class="loading">データを読み込み中...</div>
       <div v-else-if="receipts.length === 0" class="no-data">{{ noDataMessage }}</div>
       <div v-else>
-        <div v-for="receipt in receipts" :key="receipt.id" class="receipt-card" :class="{ selected: selectedReceiptIds.includes(receipt.id) }">
+        <div v-for="receipt in receipts" :key="receipt.id" class="receipt-card" :class="{ selected: selectedReceiptIds.includes(receipt.id), editing: editingReceiptId === receipt.id }">
           <!-- 削除モード時のチェックボックス -->
           <div class="receipt-select" v-if="deleteMode">
             <input 
@@ -60,13 +60,50 @@
           
           <div class="receipt-content">
             <div class="receipt-header">
-              <div class="receipt-date">{{ formatDate(receipt.receipt_date || receipt.created_at) }}</div>
+              <!-- 編集モード時の日付入力 -->
+              <div class="receipt-date" v-if="editingReceiptId === receipt.id">
+                <input 
+                  type="date" 
+                  v-model="editingData.receipt_date" 
+                  class="edit-input date-input"
+                />
+              </div>
+              <!-- 通常表示時の日付 -->
+              <div class="receipt-date" v-else>
+                {{ formatDate(receipt.receipt_date || receipt.created_at) }}
+              </div>
               <div class="receipt-id">レシートID: {{ receipt.id }}</div>
             </div>
+            
             <div class="receipt-details">
-              <div class="receipt-store">{{ receipt.store_name }}</div>
-              <div class="receipt-amount">{{ receipt.total_amount.toLocaleString() }}円</div>
+              <!-- 編集モード時の店舗名入力 -->
+              <div class="receipt-store" v-if="editingReceiptId === receipt.id">
+                <input 
+                  type="text" 
+                  v-model="editingData.store_name" 
+                  placeholder="店舗名"
+                  class="edit-input store-input"
+                />
+              </div>
+              <!-- 通常表示時の店舗名 -->
+              <div class="receipt-store" v-else>{{ receipt.store_name }}</div>
+              
+              <!-- 編集モード時の金額入力 -->
+              <div class="receipt-amount" v-if="editingReceiptId === receipt.id">
+                <input 
+                  type="number" 
+                  v-model.number="editingData.total_amount" 
+                  placeholder="金額"
+                  class="edit-input amount-input"
+                  min="0"
+                />円
+              </div>
+              <!-- 通常表示時の金額 -->
+              <div class="receipt-amount" v-else>
+                {{ receipt.total_amount.toLocaleString() }}円
+              </div>
             </div>
+            
             <div class="receipt-actions">
               <div class="receipt-use-image">
                 <label>
@@ -74,10 +111,26 @@
                   手動入力
                 </label>
               </div>
-              <!-- 個別削除ボタン -->
-              <button v-if="!deleteMode" @click.prevent="deleteReceipt(receipt.id)" class="delete-single-btn" type="button">
-                削除
-              </button>
+              
+              <!-- 編集モード時のボタン -->
+              <div v-if="editingReceiptId === receipt.id" class="edit-buttons">
+                <button @click.prevent="saveEdit(receipt.id)" class="save-btn" type="button">
+                  保存
+                </button>
+                <button @click.prevent="cancelEdit" class="cancel-btn" type="button">
+                  キャンセル
+                </button>
+              </div>
+              
+              <!-- 通常モード時のボタン -->
+              <div v-else-if="!deleteMode" class="normal-buttons">
+                <button @click.prevent="startEdit(receipt)" class="edit-btn" type="button">
+                  編集
+                </button>
+                <button @click.prevent="deleteReceipt(receipt.id)" class="delete-single-btn" type="button">
+                  削除
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -103,6 +156,18 @@ const storeNameFilter = ref<string>('');
 
 const deleteMode = ref<boolean>(false);
 const selectedReceiptIds = ref<number[]>([]);
+
+// 編集機能
+const editingReceiptId = ref<number | null>(null);
+const editingData = ref<{
+  store_name: string;
+  total_amount: number;
+  receipt_date: string;
+}>({
+  store_name: '',
+  total_amount: 0,
+  receipt_date: ''
+});
 
 // 全選択状態の計算
 const allSelected = computed(() => {
@@ -314,6 +379,56 @@ const toggleUseImage = async (receipt: any) => {
   }
 };
 
+// 編集開始
+const startEdit = (receipt: any) => {
+  editingReceiptId.value = receipt.id;
+  editingData.value = {
+    store_name: receipt.store_name,
+    total_amount: receipt.total_amount,
+    receipt_date: receipt.receipt_date || ''
+  };
+};
+
+// 編集キャンセル
+const cancelEdit = () => {
+  editingReceiptId.value = null;
+  editingData.value = {
+    store_name: '',
+    total_amount: 0,
+    receipt_date: ''
+  };
+};
+
+// 編集保存
+const saveEdit = async (receiptId: number) => {
+  try {
+    const response = await fetch(`/api/receipts/${receiptId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editingData.value)
+    });
+    
+    if (handleAuthError(response)) return;
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || '更新に失敗しました');
+    }
+    
+    const result = await response.json();
+    alert(result.message || 'レシート情報を更新しました');
+    
+    // 編集モードを終了
+    cancelEdit();
+    
+    // リストを再読み込み
+    await fetchReceipts();
+  } catch (error) {
+    console.error('編集保存エラー:', error);
+    alert(`編集の保存に失敗しました: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};
+
 onMounted(fetchReceipts);
 watch(selectedMonth, fetchReceipts);
 </script>
@@ -455,6 +570,11 @@ watch(selectedMonth, fetchReceipts);
   background: #f8f9ff;
 }
 
+.receipt-card.editing {
+  border-color: #28a745;
+  background: #f8fff9;
+}
+
 .receipt-select {
   display: flex;
   align-items: center;
@@ -521,5 +641,90 @@ watch(selectedMonth, fetchReceipts);
 .delete-single-btn:hover {
   background: #dc3545;
   color: #fff;
+}
+
+/* 編集機能のスタイル */
+.edit-input {
+  padding: 0.4rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+.edit-input:focus {
+  outline: none;
+  border-color: #28a745;
+  box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.25);
+}
+
+.date-input {
+  max-width: 150px;
+}
+
+.store-input {
+  margin-bottom: 5px;
+}
+
+.amount-input {
+  max-width: 120px;
+  display: inline-block;
+  margin-right: 0.3rem;
+}
+
+.edit-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.save-btn {
+  padding: 0.3rem 0.8rem;
+  border: 1px solid #28a745;
+  background: #28a745;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.save-btn:hover {
+  background: #218838;
+  border-color: #1e7e34;
+}
+
+.cancel-btn {
+  padding: 0.3rem 0.8rem;
+  border: 1px solid #6c757d;
+  background: #fff;
+  color: #6c757d;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.cancel-btn:hover {
+  background: #6c757d;
+  color: #fff;
+}
+
+.edit-btn {
+  padding: 0.3rem 0.8rem;
+  border: 1px solid #007bff;
+  background: #fff;
+  color: #007bff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  margin-right: 0.5rem;
+}
+
+.edit-btn:hover {
+  background: #007bff;
+  color: #fff;
+}
+
+.normal-buttons {
+  display: flex;
+  gap: 0.5rem;
 }
 </style>

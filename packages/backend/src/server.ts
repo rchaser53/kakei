@@ -13,6 +13,7 @@ import {
   getAvailableMonths,
   deleteReceipt,
   deleteMultipleReceipts,
+  updateReceipt,
 } from './db.js';
 import { DATABASE_PATH } from './constants.js';
 import {
@@ -214,6 +215,45 @@ app.post('/api/receipts/manual', async (req, res) => {
   } catch (error) {
     console.error('登録エラー:', error);
     res.status(500).json({ error: '登録に失敗しました' });
+  } finally {
+    await closeDatabase(db).catch(() => {});
+  }
+});
+
+// レシート情報更新API
+app.put('/api/receipts/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    return res.status(400).json({ error: '無効なIDです' });
+  }
+
+  const { store_name, total_amount, receipt_date, use_image } = req.body;
+  
+  // 少なくとも1つの更新フィールドが必要
+  if (store_name === undefined && total_amount === undefined && 
+      receipt_date === undefined && use_image === undefined) {
+    return res.status(400).json({ error: '更新するフィールドを指定してください' });
+  }
+
+  const db = createDatabaseConnection(DATABASE_PATH);
+  try {
+    const updateData: any = {};
+    
+    if (store_name !== undefined) updateData.store_name = store_name;
+    if (total_amount !== undefined) updateData.total_amount = total_amount;
+    if (receipt_date !== undefined) updateData.receipt_date = receipt_date;
+    if (use_image !== undefined) updateData.use_image = use_image;
+
+    const updated = await updateReceipt(id, updateData, db);
+    
+    if (updated) {
+      res.json({ success: true, message: 'レシート情報を更新しました' });
+    } else {
+      res.status(404).json({ error: 'レシートが見つからないか、更新対象がありません' });
+    }
+  } catch (error) {
+    console.error('更新エラー:', error);
+    res.status(500).json({ error: 'レシート情報の更新に失敗しました' });
   } finally {
     await closeDatabase(db).catch(() => {});
   }
