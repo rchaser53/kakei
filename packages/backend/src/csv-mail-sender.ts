@@ -80,7 +80,9 @@ const authorize = async (): Promise<any> => {
 
 /**
  * CSVファイルを読み取り、ReceiptData配列として返す関数
- * CSVフォーマット: 日付(mm/dd), 店名, 金額
+ * CSVフォーマット: 
+ *   - 3列: 日付(mm/dd), 店名, 金額
+ *   - 2列: 日付(mm/dd), 金額 (店名は空文字列)
  * @param {string} csvFilePath CSVファイルのパス
  * @returns {Promise<ReceiptData[]>}
  */
@@ -109,14 +111,27 @@ const readReceiptCsvFile = async (csvFilePath: string): Promise<ReceiptData[]> =
       // カンマで分割（クォートを考慮した簡易的な処理）
       const parts = line.split(',').map(part => part.trim().replace(/^["']|["']$/g, ''));
       
-      if (parts.length < 3) {
+      // 2列または3列の場合に対応
+      if (parts.length < 2) {
         console.warn(`スキップ: 列数が不足している行 ${i + 1}: ${line}`);
         continue;
       }
       
-      const date = parts[0];
-      const storeName = parts[1];
-      const amountStr = parts[2];
+      let date: string;
+      let storeName: string;
+      let amountStr: string;
+      
+      if (parts.length === 2) {
+        // 2列の場合: 日付, 金額
+        date = parts[0];
+        storeName = ''; // 店名なし
+        amountStr = parts[1];
+      } else {
+        // 3列以上の場合: 日付, 店名, 金額
+        date = parts[0];
+        storeName = parts[1];
+        amountStr = parts[2];
+      }
       
       // 金額を数値に変換
       const amount = parseFloat(amountStr.replace(/[¥,円]/g, ''));
@@ -315,7 +330,9 @@ const getReceiptCsvFilePathFromArgs = (): string => {
     console.error('エラー: レシートCSVファイルのパスを指定してください。');
     console.log('使用方法: npm run csv-receipt-mail <csvファイルパス>');
     console.log('例: npm run csv-receipt-mail receipts.csv');
-    console.log('CSVフォーマット: 日付(mm/dd), 店名, 金額');
+    console.log('CSVフォーマット:');
+    console.log('  - 3列: 日付(mm/dd), 店名, 金額');
+    console.log('  - 2列: 日付(mm/dd), 金額');
     process.exit(1);
   }
 
@@ -333,16 +350,32 @@ const getReceiptCsvFilePathFromArgs = (): string => {
  * @returns {Promise<void>}
  */
 const generateSampleReceiptCsv = async (outputPath: string): Promise<void> => {
-  const sampleData = `日付,店名,金額
+  const sampleData3Columns = `日付,店名,金額
 9/01,スーパーA,2480
 9/03,コンビニB,1200
 9/05,ドラッグストアC,850
 9/07,レストランD,3500
 9/10,スーパーA,1980`;
 
-  await fs.writeFile(outputPath, sampleData, 'utf-8');
-  console.log(`サンプルCSVファイルを生成しました: ${outputPath}`);
-  console.log('CSVフォーマット: 日付(mm/dd), 店名, 金額');
+  const sampleData2Columns = `日付,金額
+9/01,2480
+9/03,1200
+9/05,850
+9/07,3500
+9/10,1980`;
+
+  const path3Col = outputPath.replace('.csv', '-3columns.csv');
+  const path2Col = outputPath.replace('.csv', '-2columns.csv');
+  
+  await fs.writeFile(path3Col, sampleData3Columns, 'utf-8');
+  await fs.writeFile(path2Col, sampleData2Columns, 'utf-8');
+  
+  console.log(`サンプルCSVファイルを生成しました:`);
+  console.log(`  3列形式: ${path3Col}`);
+  console.log(`  2列形式: ${path2Col}`);
+  console.log('CSVフォーマット:');
+  console.log('  - 3列: 日付(mm/dd), 店名, 金額');
+  console.log('  - 2列: 日付(mm/dd), 金額');
 };
 
 /**
